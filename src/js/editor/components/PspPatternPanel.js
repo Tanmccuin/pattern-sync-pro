@@ -145,8 +145,13 @@ export function PspPatternPanel( { coreBlockClientId, patternId } ) {
         );
         const allBlocks = ownIds.map( id => blockStore.getBlock( id ) ).filter( Boolean );
 
+        // Show ALL blocks in the pattern, not just explicitly configured ones.
+        // Unconfigured blocks (pspLock: {}) get DEFAULT_LOCK applied in the
+        // panel (content free, everything else locked) — same as a new block
+        // the author hasn't touched yet. Exclude nested core/block wrappers
+        // (patterns-within-patterns) to avoid confusing the chip navigator.
         const pspBlocks = allBlocks
-            .filter( b => b.attributes?.pspLock && Object.keys( b.attributes.pspLock ).length > 0 )
+            .filter( b => b.name && b.name !== 'core/block' )
             .map( b => ( {
                 ...b,
                 blockKey: generateBlockKey( blockStore, coreBlockClientId, b.clientId ),
