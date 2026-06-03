@@ -33,18 +33,26 @@ const { isPro, siteAdminUrl } = window.pspData ?? {};
 
 // ── Label helpers ─────────────────────────────────────────────────────────────
 
+// Container/wrapper blocks — blocks that hold other blocks as children.
+// These get "WRAP" as their base label to distinguish from content blocks.
+const WRAPPER_BLOCK_TYPES = new Set( [
+    'core/group', 'core/columns', 'core/cover', 'core/media-text',
+    'stackable/columns', 'stackable/column', 'stackable/hero',
+    'stackable/card', 'stackable/feature', 'stackable/feature-grid',
+    'generateblocks/container', 'generateblocks/grid',
+    'kadence/rowlayout', 'kadence/column',
+    'uagb/section', 'uagb/columns', 'uagb/column',
+] );
+
 const CHIP_LABELS = {
+    // Core content blocks
     'core/paragraph':     '¶',
     'core/image':         'IMG',
     'core/button':        'BTN',
-    'core/group':         'GRP',
-    'core/columns':       'COLS',
-    'core/column':        'COL',
     'core/list':          'LIST',
     'core/list-item':     'LI',
     'core/quote':         '"',
     'core/pullquote':     '❝',
-    'core/cover':         'CVR',
     'core/video':         'VID',
     'core/audio':         'AUD',
     'core/file':          'FILE',
@@ -55,7 +63,30 @@ const CHIP_LABELS = {
     'core/preformatted':  'PRE',
     'core/table':         'TBL',
     'core/gallery':       'GAL',
-    'core/media-text':    'M+T',
+    // Core containers — use WRAP
+    'core/group':         'WRAP',
+    'core/columns':       'WRAP',
+    'core/column':        'COL',
+    'core/cover':         'WRAP',
+    'core/media-text':    'WRAP',
+    // Stackable
+    'stackable/columns':  'WRAP',
+    'stackable/column':   'COL',
+    'stackable/text':     'TXT',
+    'stackable/heading':  'HDG',
+    'stackable/image':    'IMG',
+    'stackable/button':   'BTN',
+    // GenerateBlocks
+    'generateblocks/container': 'WRAP',
+    'generateblocks/text':      'TXT',
+    'generateblocks/image':     'IMG',
+    'generateblocks/button':    'BTN',
+    // Kadence
+    'kadence/rowlayout':        'WRAP',
+    'kadence/column':           'COL',
+    'kadence/advancedheading':  'HDG',
+    'kadence/advancedbutton':   'BTN',
+    'kadence/image':            'IMG',
 };
 
 const FULL_NAMES = {
@@ -84,19 +115,23 @@ const FULL_NAMES = {
 function chipLabel( block, allPspBlocks ) {
     const { name, attributes } = block;
 
-    // Headings get their level baked in.
+    // Headings: bake level into label — H1, H2, H3 etc.
     if ( name === 'core/heading' ) {
-        const level    = attributes?.level ?? 2;
+        const level     = attributes?.level ?? 2;
         const sameLevel = allPspBlocks.filter(
             b => b.name === name && ( b.attributes?.level ?? 2 ) === level
         );
         const idx = sameLevel.findIndex( b => b.clientId === block.clientId );
+        // Always number headings of the same level: H3.1, H3.2
         return sameLevel.length > 1 ? `H${ level }.${ idx + 1 }` : `H${ level }`;
     }
 
     const short    = CHIP_LABELS[ name ] ?? name.split( '/' )[ 1 ]?.slice( 0, 3 ).toUpperCase() ?? '?';
     const sameType = allPspBlocks.filter( b => b.name === name );
     const idx      = sameType.findIndex( b => b.clientId === block.clientId );
+
+    // Always number when there are 2+ of the same type to keep labels
+    // consistent — WRAP1/WRAP2/WRAP3 rather than WRAP/WRAP1/WRAP2.
     return sameType.length > 1 ? `${ short }${ idx + 1 }` : short;
 }
 
@@ -145,13 +180,14 @@ export function PspPatternPanel( { coreBlockClientId, patternId } ) {
         );
         const allBlocks = ownIds.map( id => blockStore.getBlock( id ) ).filter( Boolean );
 
-        // Show ALL blocks in the pattern, not just explicitly configured ones.
-        // Unconfigured blocks (pspLock: {}) get DEFAULT_LOCK applied in the
-        // panel (content free, everything else locked) — same as a new block
-        // the author hasn't touched yet. Exclude nested core/block wrappers
-        // (patterns-within-patterns) to avoid confusing the chip navigator.
+        // Only show blocks explicitly enabled by the author (non-empty pspLock).
+        // Unconfigured blocks are excluded to keep the chip nav clean for
+        // complex patterns. Authors enable blocks via the Author Panel in the
+        // source pattern editor. Exclude nested core/block wrappers too.
         const pspBlocks = allBlocks
-            .filter( b => b.name && b.name !== 'core/block' )
+            .filter( b => b.name && b.name !== 'core/block'
+                && b.attributes?.pspLock
+                && Object.keys( b.attributes.pspLock ).length > 0 )
             .map( b => ( {
                 ...b,
                 blockKey: generateBlockKey( blockStore, coreBlockClientId, b.clientId ),

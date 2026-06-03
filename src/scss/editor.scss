@@ -384,6 +384,18 @@ $psp-font-base:      13px;
         }
     }
 
+    // Enable prompt — shown for unconfigured blocks
+    .psp-enable-prompt {
+        p { margin: 0 0 10px; }
+    }
+
+    // Disable row — sits above Pro upsell
+    .psp-disable-row {
+        margin-top:  10px;
+        padding-top: 10px;
+        border-top:  1px solid $psp-border;
+    }
+
     .psp-group-divider {
         border:    none;
         border-top: 1px solid $psp-border;

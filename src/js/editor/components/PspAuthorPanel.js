@@ -56,6 +56,37 @@ const CONTENT_FREE = { layout: true, design: true, content: false, visibility: t
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function PspAuthorPanel( { attributes, setAttributes } ) {
+    // A block is "enabled" in PSP when its pspLock has been explicitly set.
+    // Blocks with empty pspLock {} haven't been configured yet — show the
+    // enable prompt rather than the full lock UI.
+    const isEnabled = Object.keys( attributes.pspLock ?? {} ).length > 0;
+
+    // ── Not yet enabled — show a lightweight opt-in prompt ───────────────────
+    if ( ! isEnabled ) {
+        return (
+            <InspectorControls>
+                <PanelBody
+                    title={ __( 'Sync Controls', 'pattern-sync-pro' ) }
+                    initialOpen={ true }
+                    className="psp-panel psp-author-panel"
+                >
+                    <div className="psp-enable-prompt">
+                        <p className="psp-muted">
+                            { __( 'This block isn\'t managed by Pattern Sync Pro yet. Enable it to control which attribute groups editors can override on instances.', 'pattern-sync-pro' ) }
+                        </p>
+                        <Button
+                            variant="primary"
+                            size="small"
+                            onClick={ () => setAttributes( { pspLock: DEFAULT_LOCK } ) }
+                        >
+                            { __( 'Enable PSP for this block', 'pattern-sync-pro' ) }
+                        </Button>
+                    </div>
+                </PanelBody>
+            </InspectorControls>
+        );
+    }
+
     const pspLock = { ...DEFAULT_LOCK, ...( attributes.pspLock ?? {} ) };
 
     const lockedCount = Object.values( pspLock ).filter( Boolean ).length;
@@ -130,6 +161,18 @@ export function PspAuthorPanel( { attributes, setAttributes } ) {
                         </div>
                     );
                 } ) }
+
+                { /* Disable option — lets authors remove a block from PSP */ }
+                <div className="psp-disable-row">
+                    <Button
+                        variant="tertiary"
+                        size="small"
+                        isDestructive
+                        onClick={ () => setAttributes( { pspLock: {} } ) }
+                    >
+                        { __( 'Remove from PSP', 'pattern-sync-pro' ) }
+                    </Button>
+                </div>
 
                 { ! isPro && (
                     <div className="psp-pro-upsell">
