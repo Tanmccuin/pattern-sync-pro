@@ -148,44 +148,106 @@ function fullName( block ) {
     return FULL_NAMES[ name ] ?? name.split( '/' )[ 1 ] ?? name;
 }
 
-// ── Content field meta ────────────────────────────────────────────────────────
+// ── Content field overrides ───────────────────────────────────────────────────
 //
-// Maps attribute key → { label, control } for known content-group attributes.
-// An entry here is required for a textarea/text field to render in the panel.
-// Covers core WP blocks plus common third-party library attribute names.
-// Add new entries as additional block libraries are supported.
+// Optional label / control-type overrides for known attribute keys.
+// These are NO LONGER required for a field to render — fields are now derived
+// automatically from the block's registered attribute schema. Add an entry
+// here only to override the auto-derived label or control type.
 
-const CONTENT_FIELD_META = {
-    // WP core
-    content:          { label: __( 'Content',          'pattern-sync-pro' ), control: 'textarea' },
-    value:            { label: __( 'Value',             'pattern-sync-pro' ), control: 'textarea' },
-    caption:          { label: __( 'Caption',           'pattern-sync-pro' ), control: 'textarea' },
-    url:              { label: __( 'URL',               'pattern-sync-pro' ), control: 'text'     },
-    href:             { label: __( 'Link URL',          'pattern-sync-pro' ), control: 'text'     },
-    src:              { label: __( 'Source URL',        'pattern-sync-pro' ), control: 'text'     },
-    alt:              { label: __( 'Alt text',          'pattern-sync-pro' ), control: 'text'     },
-    title:            { label: __( 'Title',             'pattern-sync-pro' ), control: 'text'     },
-    label:            { label: __( 'Label',             'pattern-sync-pro' ), control: 'text'     },
-    placeholder:      { label: __( 'Placeholder',       'pattern-sync-pro' ), control: 'text'     },
-    // Stackable Blocks
-    text:             { label: __( 'Text',              'pattern-sync-pro' ), control: 'textarea' },
-    headingTitle:     { label: __( 'Heading',           'pattern-sync-pro' ), control: 'textarea' },
-    subheadingTitle:  { label: __( 'Subheading',        'pattern-sync-pro' ), control: 'textarea' },
-    imageUrl:         { label: __( 'Image URL',         'pattern-sync-pro' ), control: 'text'     },
-    imageAlt:         { label: __( 'Image alt text',    'pattern-sync-pro' ), control: 'text'     },
-    imageTitle:       { label: __( 'Image title',       'pattern-sync-pro' ), control: 'text'     },
-    // GenerateBlocks
-    mediaUrl:         { label: __( 'Image URL',         'pattern-sync-pro' ), control: 'text'     },
-    altText:          { label: __( 'Alt text',          'pattern-sync-pro' ), control: 'text'     },
-    ariaLabel:        { label: __( 'Aria label',        'pattern-sync-pro' ), control: 'text'     },
-    // Spectra / UAGB
-    headingTitleText: { label: __( 'Heading',           'pattern-sync-pro' ), control: 'textarea' },
-    mediaURL:         { label: __( 'Image URL',         'pattern-sync-pro' ), control: 'text'     },
-    mediaAlt:         { label: __( 'Image alt text',    'pattern-sync-pro' ), control: 'text'     },
-    captionText:      { label: __( 'Caption',           'pattern-sync-pro' ), control: 'textarea' },
-    // Kadence Blocks
-    link:             { label: __( 'Link URL',          'pattern-sync-pro' ), control: 'text'     },
+const CONTENT_FIELD_OVERRIDES = {
+    content:         { label: __( 'Content',       'pattern-sync-pro' ) },
+    caption:         { label: __( 'Caption',       'pattern-sync-pro' ) },
+    alt:             { label: __( 'Alt text',      'pattern-sync-pro' ), control: 'text' },
+    placeholder:     { label: __( 'Placeholder',   'pattern-sync-pro' ), control: 'text' },
+    headingTitle:    { label: __( 'Heading',        'pattern-sync-pro' ) },
+    subheadingTitle: { label: __( 'Subheading',     'pattern-sync-pro' ) },
+    imageAlt:        { label: __( 'Image alt text', 'pattern-sync-pro' ), control: 'text' },
+    altText:         { label: __( 'Alt text',       'pattern-sync-pro' ), control: 'text' },
+    mediaAlt:        { label: __( 'Image alt text', 'pattern-sync-pro' ), control: 'text' },
+    ariaLabel:       { label: __( 'Aria label',     'pattern-sync-pro' ), control: 'text' },
 };
+
+// URL-like attribute name patterns — these get a single-line text input.
+const URL_ATTR_PATTERN = /url|src|href|link/i;
+
+/**
+ * Convert a camelCase or lowercase attribute key to a human-readable label.
+ * e.g. "headingTitle" → "Heading Title", "mediaURL" → "Media URL"
+ */
+function deriveLabel( attrKey ) {
+    return attrKey
+        .replace( /([A-Z]+)/g, ' $1' )
+        .replace( /^./, s => s.toUpperCase() )
+        .trim();
+}
+
+/**
+ * Determine the input control type for a content-group attribute.
+ * Uses the attribute's registered schema first, then falls back to name heuristics.
+ *
+ * @param {string} attrKey    Attribute name.
+ * @param {Object} attrSchema The attribute's schema from getBlockType().attributes.
+ * @return {'textarea'|'text'}
+ */
+function deriveControl( attrKey, attrSchema ) {
+    // Explicit override wins.
+    if ( CONTENT_FIELD_OVERRIDES[ attrKey ]?.control ) {
+        return CONTENT_FIELD_OVERRIDES[ attrKey ].control;
+    }
+    // Schema-based: html/richtext source → textarea; attribute/text source → text.
+    if ( attrSchema?.source === 'html' )      return 'textarea';
+    if ( attrSchema?.source === 'text' )      return 'text';
+    if ( attrSchema?.source === 'attribute' ) return 'text';
+    // Fallback heuristic: URL-like names → single-line input.
+    return URL_ATTR_PATTERN.test( attrKey ) ? 'text' : 'textarea';
+}
+
+/**
+ * Resolve editable content fields for a block's content group.
+ *
+ * Instead of a static whitelist, we use WP's block registry to discover
+ * which attributes are string-typed and therefore editable as text.
+ * This makes PSP compatible with any block library automatically — no
+ * per-library registration needed for the field to appear.
+ *
+ * @param {string}   blockName   e.g. 'stackable/text'
+ * @param {string[]} groupAttrs  Attribute keys in the content group for this block.
+ * @param {Object}   sourceAttrs Current block attributes (to check existence).
+ * @return {Array<{attrKey, label, control}>}
+ */
+function getContentFields( blockName, groupAttrs, sourceAttrs ) {
+    const blockType       = wp.blocks?.getBlockType?.( blockName );
+    const registeredAttrs = blockType?.attributes ?? {};
+
+    return groupAttrs
+        .filter( attrKey => {
+            // Attribute must exist on this block instance.
+            if ( ! ( attrKey in sourceAttrs ) ) return false;
+
+            const schema = registeredAttrs[ attrKey ];
+
+            // Must be a string-type or html/text/attribute-sourced attribute.
+            // Skips booleans, objects (style tree), numbers, arrays.
+            if ( schema ) {
+                const editableSources = [ 'html', 'text', 'attribute' ];
+                return schema.type === 'string' || editableSources.includes( schema.source );
+            }
+
+            // No registered schema (e.g. third-party block without block.json):
+            // include if the current value is a string.
+            return typeof sourceAttrs[ attrKey ] === 'string';
+        } )
+        .map( attrKey => {
+            const schema   = registeredAttrs[ attrKey ];
+            const override = CONTENT_FIELD_OVERRIDES[ attrKey ] ?? {};
+            return {
+                attrKey,
+                label:   override.label   ?? deriveLabel( attrKey ),
+                control: deriveControl( attrKey, schema ),
+            };
+        } );
+}
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -342,7 +404,7 @@ export function PspPatternPanel( { coreBlockClientId, patternId } ) {
                         { freeGroups.map( group => {
                             const groupAttrs   = effectiveLockGroups[ group ] ?? LOCK_GROUPS[ group ] ?? [];
                             const editableAttrs = group === 'content'
-                                ? groupAttrs.filter( k => k in CONTENT_FIELD_META && k in activeBlock.attributes )
+                                ? getContentFields( activeBlock.name, groupAttrs, activeBlock.attributes )
                                 : [];
                             const isGroupChanged = groupAttrs.some( k => k in blockOverrides );
 
@@ -357,17 +419,16 @@ export function PspPatternPanel( { coreBlockClientId, patternId } ) {
                                         ) }
                                     </div>
 
-                                    { editableAttrs.map( attrKey => {
-                                        const meta         = CONTENT_FIELD_META[ attrKey ];
+                                    { editableAttrs.map( ( { attrKey, label, control } ) => {
                                         const currentVal   = blockOverrides[ attrKey ] ?? activeBlock.attributes[ attrKey ] ?? '';
                                         const isOverridden = attrKey in blockOverrides;
 
                                         return (
                                             <div key={ attrKey } className="psp-field-row">
-                                                { meta.control === 'textarea' ? (
+                                                { control === 'textarea' ? (
                                                     <TextareaControl
                                                         __nextHasNoMarginBottom
-                                                        label={ meta.label }
+                                                        label={ label }
                                                         value={ currentVal }
                                                         onChange={ val => updateOverride( attrKey, val ) }
                                                         className={ isOverridden ? 'psp-field--overridden' : '' }
@@ -376,7 +437,7 @@ export function PspPatternPanel( { coreBlockClientId, patternId } ) {
                                                 ) : (
                                                     <TextControl
                                                         __nextHasNoMarginBottom
-                                                        label={ meta.label }
+                                                        label={ label }
                                                         value={ currentVal }
                                                         onChange={ val => updateOverride( attrKey, val ) }
                                                         className={ isOverridden ? 'psp-field--overridden' : '' }
