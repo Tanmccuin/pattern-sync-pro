@@ -290,23 +290,24 @@ $psp-font-base:      13px;
 
 .psp-author-panel {
 
-    // Status + preset row — sits above the group list
+    // Status pill on row 1, preset buttons full-width on row 2.
+    // Single-row layout overflows with long status text or wide button labels.
     .psp-header-row {
         display:        flex;
-        align-items:    center;
-        gap:            6px;
+        flex-direction: column;
+        gap:            8px;
         margin-bottom:  12px;
     }
 
     .psp-status-pill {
         display:       inline-flex;
+        align-self:    flex-start;   // Don't stretch to full width
         align-items:   center;
         padding:       3px 9px;
         border-radius: $psp-radius-pill;
         font-size:     $psp-font-xs;
         font-weight:   600;
         line-height:   1.6;
-        flex-shrink:   0;
 
         &.is-all-locked {
             background: $psp-bg-row;
@@ -325,16 +326,17 @@ $psp-font-base:      13px;
         }
     }
 
+    // Preset buttons — equal width, fill the full row
     .psp-presets {
-        display:  flex;
-        gap:      6px;
-        margin-left: auto;
+        display: flex;
+        gap:     6px;
 
         .components-button {
-            font-size:  $psp-font-xs;
-            height:     26px;
-            padding:    0 10px;
-            border-radius: $psp-radius-sm !important;
+            flex:            1;
+            justify-content: center;
+            font-size:       $psp-font-xs;
+            height:          26px;
+            border-radius:   $psp-radius-sm !important;
         }
     }
 
