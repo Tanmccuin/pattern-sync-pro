@@ -4,9 +4,10 @@ const path = require( 'path' );
 module.exports = {
     ...defaultConfig,
     entry: {
-        editor: path.resolve( __dirname, 'src/js/editor/index.js' ),
-        debug:  path.resolve( __dirname, 'src/js/editor/debug.js' ),
-        admin:  path.resolve( __dirname, 'src/js/admin/uninstall.js' ),
+        editor:   path.resolve( __dirname, 'src/js/editor/index.js' ),
+        debug:    path.resolve( __dirname, 'src/js/editor/debug.js' ),
+        admin:    path.resolve( __dirname, 'src/js/admin/uninstall.js' ),
+        settings: path.resolve( __dirname, 'src/js/admin/settings.js' ),
     },
     output: {
         ...defaultConfig.output,

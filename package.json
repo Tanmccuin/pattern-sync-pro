@@ -4,8 +4,8 @@
   "description": "Field-level sync control for WordPress block patterns",
   "private": true,
   "scripts": {
-    "build": "wp-scripts build src/js/editor/index.js src/js/admin/uninstall.js --output-path=build",
-    "start": "wp-scripts start src/js/editor/index.js src/js/admin/uninstall.js --output-path=build",
+    "build": "wp-scripts build src/js/editor/index.js src/js/admin/uninstall.js src/js/admin/settings.js --output-path=build",
+    "start": "wp-scripts start src/js/editor/index.js src/js/admin/uninstall.js src/js/admin/settings.js --output-path=build",
     "lint:js": "wp-scripts lint-js src/js",
     "lint:css": "wp-scripts lint-style src/scss",
     "packages-update": "wp-scripts packages-update"

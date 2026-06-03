@@ -72,6 +72,7 @@ add_action( 'plugins_loaded', function () {
     // Boot admin layer.
     if ( is_admin() ) {
         ( new \PatternSyncPro\Admin\PSP_Admin() )->init();
+        ( new \PatternSyncPro\Admin\PSP_Settings() )->init();
     }
 
     // Boot REST API (Pro features).
