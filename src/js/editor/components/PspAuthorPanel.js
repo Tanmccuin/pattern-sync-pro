@@ -75,7 +75,7 @@ export function PspAuthorPanel( { attributes, setAttributes } ) {
                             { __( 'This block isn\'t managed by Pattern Sync Pro yet. Enable it to control which attribute groups editors can override on instances.', 'pattern-sync-pro' ) }
                         </p>
                         <Button
-                            variant="primary"
+                            variant="secondary"
                             size="small"
                             onClick={ () => setAttributes( { pspLock: DEFAULT_LOCK } ) }
                         >
