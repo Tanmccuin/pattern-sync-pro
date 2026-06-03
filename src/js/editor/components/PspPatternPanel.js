@@ -149,16 +149,42 @@ function fullName( block ) {
 }
 
 // ── Content field meta ────────────────────────────────────────────────────────
+//
+// Maps attribute key → { label, control } for known content-group attributes.
+// An entry here is required for a textarea/text field to render in the panel.
+// Covers core WP blocks plus common third-party library attribute names.
+// Add new entries as additional block libraries are supported.
 
 const CONTENT_FIELD_META = {
-    content:     { label: __( 'Content',     'pattern-sync-pro' ), control: 'textarea' },
-    url:         { label: __( 'URL',         'pattern-sync-pro' ), control: 'text'     },
-    href:        { label: __( 'Link URL',    'pattern-sync-pro' ), control: 'text'     },
-    alt:         { label: __( 'Alt text',    'pattern-sync-pro' ), control: 'text'     },
-    caption:     { label: __( 'Caption',     'pattern-sync-pro' ), control: 'textarea' },
-    placeholder: { label: __( 'Placeholder', 'pattern-sync-pro' ), control: 'text'     },
-    label:       { label: __( 'Label',       'pattern-sync-pro' ), control: 'text'     },
-    title:       { label: __( 'Title',       'pattern-sync-pro' ), control: 'text'     },
+    // WP core
+    content:          { label: __( 'Content',          'pattern-sync-pro' ), control: 'textarea' },
+    value:            { label: __( 'Value',             'pattern-sync-pro' ), control: 'textarea' },
+    caption:          { label: __( 'Caption',           'pattern-sync-pro' ), control: 'textarea' },
+    url:              { label: __( 'URL',               'pattern-sync-pro' ), control: 'text'     },
+    href:             { label: __( 'Link URL',          'pattern-sync-pro' ), control: 'text'     },
+    src:              { label: __( 'Source URL',        'pattern-sync-pro' ), control: 'text'     },
+    alt:              { label: __( 'Alt text',          'pattern-sync-pro' ), control: 'text'     },
+    title:            { label: __( 'Title',             'pattern-sync-pro' ), control: 'text'     },
+    label:            { label: __( 'Label',             'pattern-sync-pro' ), control: 'text'     },
+    placeholder:      { label: __( 'Placeholder',       'pattern-sync-pro' ), control: 'text'     },
+    // Stackable Blocks
+    text:             { label: __( 'Text',              'pattern-sync-pro' ), control: 'textarea' },
+    headingTitle:     { label: __( 'Heading',           'pattern-sync-pro' ), control: 'textarea' },
+    subheadingTitle:  { label: __( 'Subheading',        'pattern-sync-pro' ), control: 'textarea' },
+    imageUrl:         { label: __( 'Image URL',         'pattern-sync-pro' ), control: 'text'     },
+    imageAlt:         { label: __( 'Image alt text',    'pattern-sync-pro' ), control: 'text'     },
+    imageTitle:       { label: __( 'Image title',       'pattern-sync-pro' ), control: 'text'     },
+    // GenerateBlocks
+    mediaUrl:         { label: __( 'Image URL',         'pattern-sync-pro' ), control: 'text'     },
+    altText:          { label: __( 'Alt text',          'pattern-sync-pro' ), control: 'text'     },
+    ariaLabel:        { label: __( 'Aria label',        'pattern-sync-pro' ), control: 'text'     },
+    // Spectra / UAGB
+    headingTitleText: { label: __( 'Heading',           'pattern-sync-pro' ), control: 'textarea' },
+    mediaURL:         { label: __( 'Image URL',         'pattern-sync-pro' ), control: 'text'     },
+    mediaAlt:         { label: __( 'Image alt text',    'pattern-sync-pro' ), control: 'text'     },
+    captionText:      { label: __( 'Caption',           'pattern-sync-pro' ), control: 'textarea' },
+    // Kadence Blocks
+    link:             { label: __( 'Link URL',          'pattern-sync-pro' ), control: 'text'     },
 };
 
 // ── Component ─────────────────────────────────────────────────────────────────
