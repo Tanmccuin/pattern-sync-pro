@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# npm
+package-lock.json
+
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V8
+.Trashes
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log*
+
+# WordPress test environment (not part of the plugin)
+# build/ is intentionally tracked — compiled assets are required
+# for the plugin to function without a build step on install.

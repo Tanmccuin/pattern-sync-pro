@@ -1,0 +1,678 @@
+/**
+ * Pattern Sync Pro — Block Editor Styles
+ *
+ * Aesthetic: clean, modern, Cwicly-inspired.
+ * - White panels, hairline borders, 8px radius throughout
+ * - Each row is an independent rounded control
+ * - Minimal color — grey/white + single accent for active state
+ * - No heavy section headers; thin dividers with floating labels
+ */
+
+// ── Design tokens ─────────────────────────────────────────────────────────────
+
+$psp-white:          #ffffff;
+$psp-bg-row:         #f4f5f6;     // row fill — same shade Cwicly uses for inputs
+$psp-bg-row-free:    #f0f4fd;     // free/overridable row — very faint blue
+$psp-bg-row-locked:  #f4f5f6;     // locked row — same as default row, just muted text
+$psp-border:         #e8e9eb;     // panel-level hairline
+$psp-border-row:     #e0e2e5;     // row border
+
+$psp-text:           #1e1e1e;
+$psp-text-mid:       #5a5c60;
+$psp-text-muted:     #9a9da3;
+
+$psp-blue:           #2271b1;
+$psp-blue-dim:       #d0e2f3;
+
+$psp-changed-dot:    #00a32a;     // green dot — matches WP success green
+$psp-changed-bg:     #f0faf4;
+$psp-changed-border: #b8e6cb;
+
+$psp-pro:            #7c3aed;
+$psp-pro-bg:         #f5f3ff;
+$psp-pro-border:     #ddd6fe;
+
+$psp-radius:         8px;
+$psp-radius-sm:      6px;
+$psp-radius-pill:    999px;
+
+$psp-font-2xs:       10px;
+$psp-font-xs:        11px;
+$psp-font-sm:        12px;
+$psp-font-base:      13px;
+
+// ── Shared panel shell ────────────────────────────────────────────────────────
+
+.psp-panel {
+    // Override WP's PanelBody default padding to give us full control
+    .components-panel__body-title button {
+        font-size:   $psp-font-base;
+        font-weight: 600;
+    }
+
+    // Thin divider with a floating label — used between sections
+    .psp-divider {
+        display:        flex;
+        align-items:    center;
+        gap:            8px;
+        margin:         12px 0 8px;
+        color:          $psp-text-muted;
+        font-size:      $psp-font-2xs;
+        font-weight:    700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+
+        &::before,
+        &::after {
+            content:    '';
+            flex:       1;
+            height:     1px;
+            background: $psp-border;
+        }
+
+        &::before { display: none; } // Only right-side line under the label
+        &::after  { display: block; }
+    }
+
+    .psp-muted {
+        font-size:   $psp-font-xs;
+        color:       $psp-text-muted;
+        line-height: 1.5;
+        margin:      0;
+    }
+}
+
+// ── Group row — shared base ───────────────────────────────────────────────────
+// Every group row (locked or free) is a self-contained rounded card.
+
+.psp-group-row {
+    display:        flex;
+    align-items:    center;
+    gap:            8px;
+    padding:        9px 10px;
+    border-radius:  $psp-radius;
+    border:         1px solid $psp-border-row;
+    background:     $psp-bg-row;
+    margin-bottom:  4px;
+    font-size:      $psp-font-base;
+    transition:     background 0.1s;
+
+    &:last-child { margin-bottom: 0; }
+
+    .psp-group-icon {
+        font-size:    12px;
+        line-height:  1;
+        color:        $psp-text-muted;
+        flex-shrink:  0;
+        width:        16px;
+        text-align:   center;
+    }
+
+    .psp-group-name {
+        flex:        1;
+        font-weight: 500;
+        font-size:   $psp-font-base;
+        color:       $psp-text;
+    }
+
+    // Locked variant — muted everything
+    &.psp-group-locked {
+        .psp-group-icon,
+        .psp-group-name {
+            color: $psp-text-muted;
+        }
+    }
+
+    // Free / overridable variant
+    &.psp-group-free {
+        background: $psp-bg-row-free;
+        border-color: $psp-blue-dim;
+    }
+}
+
+// ── Changed dot + reset ───────────────────────────────────────────────────────
+
+.psp-changed-dot {
+    width:         7px;
+    height:        7px;
+    border-radius: $psp-radius-pill;
+    background:    $psp-changed-dot;
+    flex-shrink:   0;
+}
+
+.psp-group-reset {
+    flex-shrink: 0;
+    display:     inline-flex;
+    align-items: center;
+    justify-content: center;
+    width:        20px !important;
+    height:       20px !important;
+    min-height:   unset !important;
+    padding:      0    !important;
+    border-radius: $psp-radius-pill !important;
+    font-size:    12px !important;
+    line-height:  1    !important;
+    color:        $psp-text-muted !important;
+    background:   transparent !important;
+
+    &:hover {
+        background: rgba(#cc1818, 0.08) !important;
+        color:      #cc1818 !important;
+    }
+}
+
+
+// ── Pattern Panel — chip navigator ───────────────────────────────────────────
+
+.psp-pattern-panel {
+
+    // Chip row + block header grouped together
+    .psp-block-nav {
+        margin-bottom: 10px;
+    }
+
+    // Scrollable row of block type chips
+    .psp-block-chips {
+        display:    flex;
+        gap:        4px;
+        flex-wrap:  wrap;
+        margin-bottom: 8px;
+    }
+
+    .psp-block-chip {
+        display:         inline-flex;
+        align-items:     center;
+        justify-content: center;
+        position:        relative;
+        width:           34px;
+        height:          28px;
+        padding:         0;
+        border-radius:   $psp-radius-sm;
+        border:          1px solid $psp-border-row;
+        background:      $psp-bg-row;
+        font-size:       9px;
+        font-weight:     700;
+        font-family:     ui-monospace, 'SF Mono', 'Cascadia Code', monospace;
+        color:           $psp-text-mid;
+        cursor:          pointer;
+        transition:      all 0.1s;
+        line-height:     1;
+        letter-spacing:  -0.02em;
+
+        // Active chip — uses WP admin theme color (adapts to color scheme)
+        &.is-active {
+            background:   var(--wp-admin-theme-color, #3858e9);
+            border-color: var(--wp-admin-theme-color, #3858e9);
+            color:        #fff;
+
+            .psp-chip-dot  { background: #fff; }
+            .psp-chip-lock { filter: brightness(10); }
+        }
+
+        &:hover:not(.is-active):not(:disabled) {
+            background:   var(--wp-admin-theme-color--rgb, $psp-bg-row-free);
+            border-color: var(--wp-admin-theme-color, $psp-blue);
+            color:        var(--wp-admin-theme-color, $psp-blue);
+        }
+
+        // Fully locked chip — muted
+        &.is-locked {
+            opacity:    0.55;
+            cursor:     default;
+        }
+
+        // Changed indicator — small dot top-right
+        .psp-chip-dot {
+            position:      absolute;
+            top:           3px;
+            right:         3px;
+            width:         5px;
+            height:        5px;
+            border-radius: $psp-radius-pill;
+            background:    $psp-changed-dot;
+            pointer-events: none;
+        }
+
+        // Lock icon — tiny, bottom-right
+        .psp-chip-lock {
+            position:    absolute;
+            bottom:      1px;
+            right:       2px;
+            font-size:   7px;
+            line-height: 1;
+            pointer-events: none;
+        }
+    }
+
+    // Block name + position counter
+    .psp-active-block__header {
+        display:         flex;
+        align-items:     center;
+        justify-content: space-between;
+        padding:         6px 0 4px;
+        border-top:      1px solid $psp-border;
+
+        .psp-active-block__name {
+            font-size:      $psp-font-xs;
+            font-weight:    700;
+            color:          $psp-text;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+
+        .psp-active-block__position {
+            font-size:  $psp-font-xs;
+            color:      $psp-text-muted;
+            font-variant-numeric: tabular-nums;
+        }
+    }
+
+    // Prev / Next footer
+    .psp-block-nav__footer {
+        display:        flex;
+        justify-content: space-between;
+        margin-top:     10px;
+        padding-top:    10px;
+        border-top:     1px solid $psp-border;
+
+        .components-button {
+            font-size: $psp-font-sm;
+        }
+
+        .components-button[disabled] {
+            opacity: 0.35;
+        }
+    }
+}
+
+
+// ── Author Panel ──────────────────────────────────────────────────────────────
+
+.psp-author-panel {
+
+    // Status + preset row — sits above the group list
+    .psp-header-row {
+        display:        flex;
+        align-items:    center;
+        gap:            6px;
+        margin-bottom:  12px;
+    }
+
+    .psp-status-pill {
+        display:       inline-flex;
+        align-items:   center;
+        padding:       3px 9px;
+        border-radius: $psp-radius-pill;
+        font-size:     $psp-font-xs;
+        font-weight:   600;
+        line-height:   1.6;
+        flex-shrink:   0;
+
+        &.is-all-locked {
+            background: $psp-bg-row;
+            color:      $psp-text-muted;
+            border:     1px solid $psp-border-row;
+        }
+        &.is-mixed {
+            background: $psp-bg-row-free;
+            color:      $psp-blue;
+            border:     1px solid $psp-blue-dim;
+        }
+        &.is-all-open {
+            background: #fff8e6;
+            color:      #7a5600;
+            border:     1px solid #f0d680;
+        }
+    }
+
+    .psp-presets {
+        display:  flex;
+        gap:      6px;
+        margin-left: auto;
+
+        .components-button {
+            font-size:  $psp-font-xs;
+            height:     26px;
+            padding:    0 10px;
+            border-radius: $psp-radius-sm !important;
+        }
+    }
+
+    // Toggle rows — each group is a compact row with icon + label + toggle
+    .psp-toggle-row {
+        display:         flex;
+        align-items:     center;
+        gap:             8px;
+        padding:         8px 10px;
+        border-radius:   $psp-radius;
+        border:          1px solid $psp-border-row;
+        background:      $psp-bg-row;
+        margin-bottom:   4px;
+        transition:      background 0.1s;
+
+        &:last-of-type { margin-bottom: 0; }
+
+        &.is-open {
+            background:   $psp-bg-row-free;
+            border-color: $psp-blue-dim;
+        }
+
+        .psp-group-icon {
+            font-size:   12px;
+            line-height: 1;
+            color:       $psp-text-muted;
+            flex-shrink: 0;
+            width:       16px;
+            text-align:  center;
+        }
+
+        .components-toggle-control {
+            flex:          1;
+            margin-bottom: 0 !important;
+
+            .components-toggle-control__label {
+                font-size:   $psp-font-base;
+                font-weight: 500;
+                color:       $psp-text;
+            }
+
+            .components-form-help {
+                font-size:  $psp-font-xs;
+                color:      $psp-text-muted;
+                margin-top: 2px;
+            }
+        }
+    }
+
+    .psp-group-divider {
+        border:    none;
+        border-top: 1px solid $psp-border;
+        margin:    10px 0;
+    }
+}
+
+
+// ── Instance Panel ────────────────────────────────────────────────────────────
+
+.psp-instance-panel {
+
+    // Pattern source link — styled as a data row
+    .psp-pattern-link {
+        display:         flex;
+        align-items:     center;
+        gap:             6px;
+        margin-bottom:   12px;
+        padding:         8px 10px;
+        background:      $psp-bg-row;
+        border:          1px solid $psp-border-row;
+        border-radius:   $psp-radius;
+        text-decoration: none;
+        color:           $psp-text;
+        font-size:       $psp-font-sm;
+        font-weight:     500;
+        transition:      background 0.1s;
+
+        &:hover {
+            background: #ebebec;
+            color:      $psp-text;
+        }
+
+        .psp-pattern-link__eyebrow {
+            font-size:      $psp-font-2xs;
+            font-weight:    700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color:          $psp-text-muted;
+            flex-shrink:    0;
+        }
+
+        .psp-pattern-link__name {
+            flex: 1;
+        }
+
+        svg {
+            fill:       $psp-text-muted;
+            flex-shrink: 0;
+        }
+    }
+
+    // Thin divider with label
+    .psp-section-divider {
+        display:        flex;
+        align-items:    center;
+        margin:         10px 0 6px;
+        font-size:      $psp-font-2xs;
+        font-weight:    700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color:          $psp-text-muted;
+
+        &::after {
+            content:    '';
+            flex:       1;
+            height:     1px;
+            background: $psp-border;
+            margin-left: 8px;
+        }
+
+        &.is-free { color: $psp-blue; }
+    }
+
+    .psp-section {
+        margin-bottom: 6px;
+    }
+
+    // Inline editing fields (content group)
+    .psp-field-row {
+        padding:    6px 2px 2px;
+
+        .components-textarea-control__input,
+        .components-text-control__input {
+            border-radius: $psp-radius-sm;
+            border-color:  $psp-border-row;
+            background:    $psp-bg-row;
+            font-size:     $psp-font-base;
+
+            &:focus {
+                border-color: $psp-blue;
+                background:   $psp-white;
+                box-shadow:   0 0 0 1px $psp-blue;
+            }
+        }
+
+        .components-base-control__label {
+            font-size:      $psp-font-xs;
+            color:          $psp-text-muted;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight:    600;
+        }
+
+        // Active override — green left border accent
+        .psp-field--overridden {
+            .components-textarea-control__input,
+            .components-text-control__input {
+                border-color:  $psp-changed-border;
+                background:    $psp-changed-bg;
+                border-left:   3px solid $psp-changed-dot;
+                padding-left:  9px;
+            }
+        }
+    }
+
+    .psp-field-note {
+        font-size:  $psp-font-xs;
+        color:      $psp-text-muted;
+        margin:     4px 0 0;
+        font-style: italic;
+        padding:    0 2px;
+    }
+
+    // Notice shown below an overridden field — explains canvas vs front-end gap
+    .psp-override-notice {
+        display:       flex;
+        align-items:   flex-start;
+        gap:           5px;
+        margin:        5px 0 0;
+        padding:       6px 8px;
+        background:    #fffbeb;
+        border:        1px solid #fde68a;
+        border-radius: $psp-radius-sm;
+        font-size:     $psp-font-xs;
+        color:         #92400e;
+        line-height:   1.5;
+
+        &::before {
+            content:     'ℹ';
+            flex-shrink: 0;
+            font-style:  normal;
+        }
+    }
+
+    // All-locked notice
+    .psp-all-locked-notice {
+        display:       flex;
+        align-items:   flex-start;
+        gap:           8px;
+        padding:       10px;
+        background:    $psp-bg-row;
+        border:        1px solid $psp-border-row;
+        border-radius: $psp-radius;
+        font-size:     $psp-font-sm;
+        color:         $psp-text-muted;
+        line-height:   1.5;
+
+        svg { fill: currentColor; flex-shrink: 0; margin-top: 1px; }
+    }
+
+    // Loading
+    .psp-loading {
+        display:     flex;
+        align-items: center;
+        gap:         8px;
+        padding:     8px 0;
+        color:       $psp-text-muted;
+        font-size:   $psp-font-sm;
+    }
+
+    // Reset all footer
+    .psp-revert-all {
+        margin-top:  12px;
+        padding-top: 10px;
+        border-top:  1px solid $psp-border;
+    }
+
+    .psp-revert-all__confirm {
+        padding:       10px;
+        background:    #fff8f8;
+        border:        1px solid #fcc;
+        border-radius: $psp-radius;
+
+        p {
+            margin:      0 0 8px;
+            font-size:   $psp-font-sm;
+            color:       $psp-text;
+            line-height: 1.5;
+        }
+
+        .psp-revert-all__actions {
+            display: flex;
+            gap:     6px;
+        }
+    }
+}
+
+
+// ── Pro upsell ────────────────────────────────────────────────────────────────
+
+.psp-pro-upsell {
+    display:       flex;
+    align-items:   flex-start;
+    gap:           10px;
+    margin-top:    14px;
+    padding:       10px 12px;
+    background:    $psp-pro-bg;
+    border:        1px solid $psp-pro-border;
+    border-radius: $psp-radius;
+
+    .psp-pro-badge {
+        flex-shrink:    0;
+        display:        inline-flex;
+        align-items:    center;
+        padding:        2px 6px;
+        border-radius:  $psp-radius-sm;
+        background:     $psp-pro;
+        color:          #fff;
+        font-size:      $psp-font-2xs;
+        font-weight:    700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        margin-top:     2px;
+    }
+
+    .psp-pro-body {
+        flex: 1;
+        min-width: 0;
+
+        p {
+            margin:      0 0 4px;
+            font-size:   $psp-font-sm;
+            color:       $psp-text-mid;
+            line-height: 1.5;
+
+            em {
+                font-style:  normal;
+                font-weight: 600;
+                color:       $psp-pro;
+            }
+        }
+
+        a {
+            font-size:       $psp-font-sm;
+            color:           $psp-pro;
+            font-weight:     600;
+            text-decoration: none;
+
+            &:hover { text-decoration: underline; }
+        }
+    }
+}
+
+
+// ── Canvas: pattern wrapper override badge ────────────────────────────────────
+//
+// Shown on the core/block wrapper in the canvas when pspOverrides is non-empty.
+// Uses outline + box-shadow rather than ::after pseudo-elements — more reliable
+// across WP's block wrapper overflow/stacking contexts.
+
+.psp-pattern--has-overrides {
+    outline:        2px solid rgba($psp-changed-dot, 0.55) !important;
+    outline-offset: 3px;
+    box-shadow:     0 0 0 4px rgba($psp-changed-dot, 0.07) !important;
+}
+
+
+// ── Block canvas lock indicators ──────────────────────────────────────────────
+
+.psp-block {
+    position: relative;
+
+    &::before {
+        content:       '';
+        position:      absolute;
+        left:          -3px;
+        top:           0;
+        bottom:        0;
+        width:         3px;
+        border-radius: 2px;
+        opacity:       0;
+        transition:    opacity 150ms ease;
+    }
+
+    &.is-selected::before,
+    &:hover::before { opacity: 1; }
+
+    &--fully-locked::before    { background: #cc1818; }
+    &--partially-locked::before { background: linear-gradient(to bottom, #cc1818 50%, $psp-changed-dot 50%); }
+    &--fully-free::before      { background: $psp-changed-dot; }
+}

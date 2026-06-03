@@ -1,0 +1,27 @@
+{
+  "name": "pattern-sync-pro",
+  "version": "0.1.11-alpha",
+  "description": "Field-level sync control for WordPress block patterns",
+  "private": true,
+  "scripts": {
+    "build": "wp-scripts build src/js/editor/index.js src/js/admin/uninstall.js --output-path=build",
+    "start": "wp-scripts start src/js/editor/index.js src/js/admin/uninstall.js --output-path=build",
+    "lint:js": "wp-scripts lint-js src/js",
+    "lint:css": "wp-scripts lint-style src/scss",
+    "packages-update": "wp-scripts packages-update"
+  },
+  "dependencies": {
+    "@wordpress/block-editor": "*",
+    "@wordpress/blocks": "*",
+    "@wordpress/components": "*",
+    "@wordpress/compose": "*",
+    "@wordpress/data": "*",
+    "@wordpress/hooks": "*",
+    "@wordpress/i18n": "*",
+    "ajv": "^8.20.0",
+    "ajv-keywords": "^5.1.0"
+  },
+  "devDependencies": {
+    "@wordpress/scripts": "^30.27.0"
+  }
+}

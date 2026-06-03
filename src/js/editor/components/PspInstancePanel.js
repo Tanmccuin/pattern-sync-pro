@@ -1,0 +1,350 @@
+/**
+ * PspInstancePanel — shown when an inner block of a PSP-managed pattern
+ * instance is selected in the post editor.
+ *
+ * WP 7.0+ renders synced pattern inner blocks as static HTML — the canvas
+ * is not directly editable. PSP provides sidebar editing fields for each
+ * free-group attribute. Values are stored in the ancestor core/block's
+ * `pspOverrides` attribute and applied at render time by PHP.
+ */
+
+import {
+    PanelBody,
+    Button,
+    Notice,
+    Icon,
+    TextareaControl,
+    TextControl,
+} from '@wordpress/components';
+import { InspectorControls }          from '@wordpress/block-editor';
+import { useSelect, useDispatch, select } from '@wordpress/data';
+import { useState }                   from '@wordpress/element';
+import { __, sprintf }                from '@wordpress/i18n';
+import { lock, external }             from '@wordpress/icons';
+import {
+    PSP_Pattern_Lock_JS,
+    LOCK_GROUPS,
+    getLockGroupsForBlock,
+    generateBlockKey,
+} from '../utils/lock-utils';
+
+const { isPro, siteAdminUrl } = window.pspData ?? {};
+
+const LOCK_GROUP_LABELS = {
+    layout:     __( 'Layout',      'pattern-sync-pro' ),
+    design:     __( 'Design',      'pattern-sync-pro' ),
+    content:    __( 'Content',     'pattern-sync-pro' ),
+    visibility: __( 'Visibility',  'pattern-sync-pro' ),
+    classes:    __( 'CSS Classes', 'pattern-sync-pro' ),
+};
+
+// Attributes in the content group that get editing fields in the free tier.
+// Keyed by attribute name → { label, control: 'textarea'|'text' }
+const CONTENT_FIELD_META = {
+    content:     { label: __( 'Content',     'pattern-sync-pro' ), control: 'textarea' },
+    url:         { label: __( 'URL',         'pattern-sync-pro' ), control: 'text' },
+    href:        { label: __( 'Link URL',    'pattern-sync-pro' ), control: 'text' },
+    alt:         { label: __( 'Alt text',    'pattern-sync-pro' ), control: 'text' },
+    caption:     { label: __( 'Caption',     'pattern-sync-pro' ), control: 'textarea' },
+    placeholder: { label: __( 'Placeholder', 'pattern-sync-pro' ), control: 'text' },
+    label:       { label: __( 'Label',       'pattern-sync-pro' ), control: 'text' },
+    title:       { label: __( 'Title',       'pattern-sync-pro' ), control: 'text' },
+};
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function groupHasOverrides( blockOverrides, group, lockGroups ) {
+    const keys = lockGroups?.[ group ] ?? LOCK_GROUPS[ group ];
+    if ( ! blockOverrides || ! keys ) return false;
+    return keys.some( k => k in blockOverrides );
+}
+
+// ── Component ─────────────────────────────────────────────────────────────────
+
+export function PspInstancePanel( {
+    blockName,
+    attributes,
+    patternId,
+    coreBlockClientId,
+    blockClientId,
+} ) {
+    // Use block-specific lock groups (merges third-party library mappings).
+    const effectiveLockGroups = getLockGroupsForBlock( blockName );
+    const lockMask     = PSP_Pattern_Lock_JS.getLockMask( attributes.pspLock );
+    const freeGroups   = Object.entries( lockMask ).filter( ( [ , v ] ) => ! v ).map( ( [ g ] ) => g );
+    const lockedGroups = Object.entries( lockMask ).filter( ( [ , v ] ) =>   v ).map( ( [ g ] ) => g );
+
+    const { updateBlockAttributes } = useDispatch( 'core/block-editor' );
+    const [ confirmingRevertAll, setConfirmingRevertAll ] = useState( false );
+
+    // Read pspOverrides + blockKey from the core/block ancestor.
+    const { blockOverrides, blockKey } = useSelect( ( sel ) => {
+        const blockStore   = sel( 'core/block-editor' );
+        const coreBlock    = blockStore.getBlock( coreBlockClientId );
+        const pspOverrides = coreBlock?.attributes?.pspOverrides ?? {};
+        const key          = generateBlockKey( blockStore, coreBlockClientId, blockClientId );
+        return {
+            blockOverrides: key ? ( pspOverrides[ key ] ?? {} ) : {},
+            blockKey:       key,
+        };
+    }, [ coreBlockClientId, blockClientId ] );
+
+    // Source attribute values for the current block (fallback when no override).
+    const sourceAttrs = useSelect( ( sel ) => {
+        return sel( 'core/block-editor' ).getBlock( blockClientId )?.attributes ?? {};
+    }, [ blockClientId ] );
+
+    // Pattern title.
+    const patternTitle = useSelect( ( sel ) => {
+        if ( ! patternId ) return '';
+        const record = sel( 'core' ).getEntityRecord( 'postType', 'wp_block', patternId );
+        return record?.title?.rendered ?? record?.title?.raw ?? '';
+    }, [ patternId ] );
+
+    const hasOverrides    = Object.keys( blockOverrides ).length > 0;
+    const patternEditUrl  = patternId
+        ? `${ siteAdminUrl ?? '/wp-admin/' }post.php?post=${ patternId }&action=edit`
+        : null;
+
+    // ── Override write helpers ────────────────────────────────────────────────
+
+    const updateOverride = ( attrKey, value ) => {
+        const blockStore = select( 'core/block-editor' );
+        const coreBlock  = blockStore.getBlock( coreBlockClientId );
+        if ( ! coreBlock || ! blockKey ) return;
+
+        const existing     = coreBlock.attributes.pspOverrides ?? {};
+        const blockEntry   = { ...( existing[ blockKey ] ?? {} ) };
+
+        // If value matches source, remove the override entirely for this key.
+        if ( value === ( sourceAttrs[ attrKey ] ?? '' ) ) {
+            delete blockEntry[ attrKey ];
+        } else {
+            blockEntry[ attrKey ] = value;
+        }
+
+        const updated = { ...existing };
+        if ( Object.keys( blockEntry ).length === 0 ) {
+            delete updated[ blockKey ];
+        } else {
+            updated[ blockKey ] = blockEntry;
+        }
+
+        updateBlockAttributes( coreBlockClientId, { pspOverrides: updated } );
+    };
+
+    const resetGroup = ( group ) => {
+        const blockStore = select( 'core/block-editor' );
+        const coreBlock  = blockStore.getBlock( coreBlockClientId );
+        if ( ! coreBlock || ! blockKey ) return;
+
+        const existing    = coreBlock.attributes.pspOverrides ?? {};
+        const groupKeys   = LOCK_GROUPS[ group ] ?? [];
+        const blockEntry  = Object.fromEntries(
+            Object.entries( existing[ blockKey ] ?? {} ).filter( ( [ k ] ) => ! groupKeys.includes( k ) )
+        );
+
+        const updated = { ...existing };
+        if ( Object.keys( blockEntry ).length === 0 ) {
+            delete updated[ blockKey ];
+        } else {
+            updated[ blockKey ] = blockEntry;
+        }
+        updateBlockAttributes( coreBlockClientId, { pspOverrides: updated } );
+    };
+
+    const resetAll = () => {
+        const blockStore = select( 'core/block-editor' );
+        const coreBlock  = blockStore.getBlock( coreBlockClientId );
+        if ( ! coreBlock || ! blockKey ) return;
+
+        const updated = { ...( coreBlock.attributes.pspOverrides ?? {} ) };
+        delete updated[ blockKey ];
+        updateBlockAttributes( coreBlockClientId, { pspOverrides: updated } );
+        setConfirmingRevertAll( false );
+    };
+
+    // ── No-block-key guard ────────────────────────────────────────────────────
+
+    if ( ! blockKey ) return null;
+
+    // ── Render ───────────────────────────────────────────────────────────────
+
+    return (
+        <InspectorControls>
+            <PanelBody
+                title={ __( 'Pattern Sync Pro', 'pattern-sync-pro' ) }
+                icon={ lock }
+                initialOpen={ freeGroups.length > 0 }
+                className="psp-panel psp-instance-panel"
+            >
+                { /* Pattern source link */ }
+                { patternEditUrl && (
+                    <a
+                        href={ patternEditUrl }
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="psp-pattern-link"
+                    >
+                        <span className="psp-pattern-link__eyebrow">
+                            { __( 'Pattern:', 'pattern-sync-pro' ) }
+                        </span>
+                        <span className="psp-pattern-link__name">
+                            { patternTitle || __( 'Source pattern', 'pattern-sync-pro' ) }
+                        </span>
+                        <Icon icon={ external } size={ 12 } />
+                    </a>
+                ) }
+
+                { /* ── Free groups ── */ }
+                { freeGroups.length > 0 && (
+                    <div className="psp-section">
+                        <div className="psp-section-divider is-free">
+                            { __( 'Customizable', 'pattern-sync-pro' ) }
+                        </div>
+
+                        { freeGroups.map( group => {
+                            const isChanged  = groupHasOverrides( blockOverrides, group, effectiveLockGroups );
+                            // For the content group, render inline editing fields.
+                            const showFields = group === 'content';
+                            const groupAttrs = effectiveLockGroups[ group ] ?? LOCK_GROUPS[ group ] ?? [];
+                            // Only show fields for attrs that exist on this block.
+                            const editableAttrs = showFields
+                                ? groupAttrs.filter( k => k in CONTENT_FIELD_META && k in sourceAttrs )
+                                : [];
+
+                            return (
+                                <div key={ group }>
+                                    <div className="psp-group-row psp-group-free">
+                                        <span className="psp-group-name">
+                                            { LOCK_GROUP_LABELS[ group ] }
+                                        </span>
+                                        { isChanged && (
+                                            <>
+                                                <span className="psp-changed-dot" aria-label={ __( 'Has overrides', 'pattern-sync-pro' ) } />
+                                                <Button
+                                                    className="psp-group-reset"
+                                                    variant="tertiary"
+                                                    size="small"
+                                                    onClick={ () => resetGroup( group ) }
+                                                    aria-label={ sprintf(
+                                                        __( 'Reset %s to pattern default', 'pattern-sync-pro' ),
+                                                        LOCK_GROUP_LABELS[ group ]
+                                                    ) }
+                                                >
+                                                    { __( 'Reset', 'pattern-sync-pro' ) }
+                                                </Button>
+                                            </>
+                                        ) }
+                                    </div>
+
+                                    { /* Inline editing fields for content group */ }
+                                    { editableAttrs.map( attrKey => {
+                                        const meta         = CONTENT_FIELD_META[ attrKey ];
+                                        const currentValue = blockOverrides[ attrKey ] ?? sourceAttrs[ attrKey ] ?? '';
+                                        const isOverridden = attrKey in blockOverrides;
+
+                                        return (
+                                            <div key={ attrKey } className="psp-field-row">
+                                                { meta.control === 'textarea' ? (
+                                                    <TextareaControl
+                                                        __nextHasNoMarginBottom
+                                                        label={ meta.label }
+                                                        value={ currentValue }
+                                                        onChange={ ( val ) => updateOverride( attrKey, val ) }
+                                                        className={ isOverridden ? 'psp-field--overridden' : '' }
+                                                        rows={ 3 }
+                                                    />
+                                                ) : (
+                                                    <TextControl
+                                                        __nextHasNoMarginBottom
+                                                        label={ meta.label }
+                                                        value={ currentValue }
+                                                        onChange={ ( val ) => updateOverride( attrKey, val ) }
+                                                        className={ isOverridden ? 'psp-field--overridden' : '' }
+                                                    />
+                                                ) }
+                                            </div>
+                                        );
+                                    } ) }
+
+                                    { /* For non-content free groups, show a note */ }
+                                    { ! showFields && ! isPro && (
+                                        <p className="psp-muted psp-field-note">
+                                            { __( 'Edit in source pattern. Pro: per-attribute override inputs.', 'pattern-sync-pro' ) }
+                                        </p>
+                                    ) }
+                                </div>
+                            );
+                        } ) }
+                    </div>
+                ) }
+
+                { /* ── Locked groups ── */ }
+                { lockedGroups.length > 0 && (
+                    <div className="psp-section">
+                        <div className="psp-section-divider">
+                            { __( 'Locked', 'pattern-sync-pro' ) }
+                        </div>
+                        { lockedGroups.map( group => (
+                            <div key={ group } className="psp-group-row psp-group-locked">
+                                <span className="psp-group-name">{ LOCK_GROUP_LABELS[ group ] }</span>
+                            </div>
+                        ) ) }
+                    </div>
+                ) }
+
+                { /* ── All locked notice ── */ }
+                { freeGroups.length === 0 && (
+                    <div className="psp-all-locked-notice">
+                        <Icon icon={ lock } size={ 16 } />
+                        <span>
+                            { __( 'All groups are locked. Edit the source pattern to allow customisation.', 'pattern-sync-pro' ) }
+                        </span>
+                    </div>
+                ) }
+
+                { /* ── Reset all ── */ }
+                { hasOverrides && (
+                    <div className="psp-revert-all">
+                        { ! confirmingRevertAll ? (
+                            <Button variant="tertiary" isDestructive size="small"
+                                onClick={ () => setConfirmingRevertAll( true ) }
+                            >
+                                { __( 'Reset all changes', 'pattern-sync-pro' ) }
+                            </Button>
+                        ) : (
+                            <div className="psp-revert-all__confirm">
+                                <p>{ __( 'Reset all customisations on this block?', 'pattern-sync-pro' ) }</p>
+                                <div className="psp-revert-all__actions">
+                                    <Button variant="primary" isDestructive size="small" onClick={ resetAll }>
+                                        { __( 'Yes, reset', 'pattern-sync-pro' ) }
+                                    </Button>
+                                    <Button variant="secondary" size="small"
+                                        onClick={ () => setConfirmingRevertAll( false ) }
+                                    >
+                                        { __( 'Cancel', 'pattern-sync-pro' ) }
+                                    </Button>
+                                </div>
+                            </div>
+                        ) }
+                    </div>
+                ) }
+
+                { /* ── Pro upsell ── */ }
+                { ! isPro && (
+                    <div className="psp-pro-upsell">
+                        <span className="psp-pro-badge">{ __( 'Pro', 'pattern-sync-pro' ) }</span>
+                        <div className="psp-pro-body">
+                            <p>{ __( 'Override design, layout, and visibility. History, rollback, role-based permissions.', 'pattern-sync-pro' ) }</p>
+                            <a href="https://patternsyncpro.com/upgrade" target="_blank" rel="noopener noreferrer">
+                                { __( 'Upgrade to Pro →', 'pattern-sync-pro' ) }
+                            </a>
+                        </div>
+                    </div>
+                ) }
+
+            </PanelBody>
+        </InspectorControls>
+    );
+}
