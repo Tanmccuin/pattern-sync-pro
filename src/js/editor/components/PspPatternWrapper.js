@@ -39,10 +39,16 @@ const withPspPatternWrapper = createHigherOrderComponent( ( BlockEdit ) => {
             const postType = editorStore.getCurrentPostType?.();
             if ( postType === 'wp_block' || ! postType ) return { isTargetPattern: false, needsActivation: false };
 
-            const innerBlocks = blockEditorStore.getBlocks?.( clientId ) ?? [];
-            const hasPspBlocks = innerBlocks.some(
-                b => b.attributes?.pspLock && Object.keys( b.attributes.pspLock ).length > 0
-            );
+            // Use getClientIdsWithDescendants rather than getBlocks so we find
+            // pspLock on blocks nested at any depth — third-party libraries like
+            // Stackable/Kadence commonly put content blocks 2-4 levels deep.
+            // This also handles async hydration: useSelect re-runs when the
+            // store changes, so if blocks load after initial paint they're caught.
+            const allIds = blockEditorStore.getClientIdsWithDescendants?.( clientId ) ?? [];
+            const hasPspBlocks = allIds.some( id => {
+                const b = blockEditorStore.getBlock( id );
+                return b?.attributes?.pspLock && Object.keys( b.attributes.pspLock ).length > 0;
+            } );
 
             if ( ! hasPspBlocks ) return { isTargetPattern: false, needsActivation: false };
 
