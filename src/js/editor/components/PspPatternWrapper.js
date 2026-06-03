@@ -44,8 +44,14 @@ const withPspPatternWrapper = createHigherOrderComponent( ( BlockEdit ) => {
             // Stackable/Kadence commonly put content blocks 2-4 levels deep.
             // This also handles async hydration: useSelect re-runs when the
             // store changes, so if blocks load after initial paint they're caught.
+            // Verify parent chain so blocks from OTHER synced patterns on the
+            // same page don't bleed in when this pattern's inner blocks haven't
+            // hydrated yet (WP loads synced pattern inner blocks asynchronously).
             const allIds = blockEditorStore.getClientIdsWithDescendants?.( clientId ) ?? [];
-            const hasPspBlocks = allIds.some( id => {
+            const ownIds = allIds.filter( id =>
+                ( blockEditorStore.getBlockParents?.( id ) ?? [] ).includes( clientId )
+            );
+            const hasPspBlocks = ownIds.some( id => {
                 const b = blockEditorStore.getBlock( id );
                 return b?.attributes?.pspLock && Object.keys( b.attributes.pspLock ).length > 0;
             } );

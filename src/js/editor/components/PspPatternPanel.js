@@ -137,8 +137,13 @@ export function PspPatternPanel( { coreBlockClientId, patternId } ) {
     // All PSP-managed inner blocks + their computed block keys + current overrides.
     const { pspBlocks, pspOverrides } = useSelect( ( sel ) => {
         const blockStore = sel( 'core/block-editor' );
-        const allIds     = blockStore.getClientIdsWithDescendants?.( coreBlockClientId ) ?? [];
-        const allBlocks  = allIds.map( id => blockStore.getBlock( id ) ).filter( Boolean );
+        const allIds  = blockStore.getClientIdsWithDescendants?.( coreBlockClientId ) ?? [];
+        // Verify parent chain — prevents blocks from OTHER synced patterns on
+        // the same page bleeding in when this pattern hasn't hydrated yet.
+        const ownIds  = allIds.filter( id =>
+            ( blockStore.getBlockParents?.( id ) ?? [] ).includes( coreBlockClientId )
+        );
+        const allBlocks = ownIds.map( id => blockStore.getBlock( id ) ).filter( Boolean );
 
         const pspBlocks = allBlocks
             .filter( b => b.attributes?.pspLock && Object.keys( b.attributes.pspLock ).length > 0 )

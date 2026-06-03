@@ -77,7 +77,10 @@ const withPspInspector = createHigherOrderComponent( ( BlockEdit ) => {
             let isPatternWrapper = false;
             if ( name === 'core/block' && attributes?.ref && postType !== 'wp_block' ) {
                 const allIds = blockEditorStore.getClientIdsWithDescendants?.( clientId ) ?? [];
-                isPatternWrapper = allIds.some( id => {
+                const ownIds = allIds.filter( id =>
+                    ( blockEditorStore.getBlockParents?.( id ) ?? [] ).includes( clientId )
+                );
+                isPatternWrapper = ownIds.some( id => {
                     const b = blockEditorStore.getBlock( id );
                     return b?.attributes?.pspLock && Object.keys( b.attributes.pspLock ).length > 0;
                 } );
