@@ -55,7 +55,19 @@ const CONTENT_FREE = { layout: true, design: true, content: false, visibility: t
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function PspAuthorPanel( { attributes, setAttributes } ) {
+/**
+ * Generate a stable metadata.name for a block if one isn't already set.
+ * Format: {shortBlockType}-{base36timestamp}, e.g. "paragraph-1ax2z3".
+ * Once set, never regenerated — this is the universal override key for
+ * both WP native and PSP storage in Phases 3+.
+ */
+function ensureMetadataName( attributes, blockName ) {
+    if ( attributes?.metadata?.name ) return attributes.metadata.name;
+    const short = blockName.replace( /^core\//, '' ).replace( /\//g, '-' );
+    return `${ short }-${ Date.now().toString( 36 ) }`;
+}
+
+export function PspAuthorPanel( { name, attributes, setAttributes } ) {
     // A block is "enabled" in PSP when its pspLock has been explicitly set.
     // Blocks with empty pspLock {} haven't been configured yet — show the
     // enable prompt rather than the full lock UI.
@@ -77,7 +89,13 @@ export function PspAuthorPanel( { attributes, setAttributes } ) {
                         <Button
                             variant="secondary"
                             size="small"
-                            onClick={ () => setAttributes( { pspLock: DEFAULT_LOCK } ) }
+                            onClick={ () => setAttributes( {
+                                pspLock:  DEFAULT_LOCK,
+                                metadata: {
+                                    ...( attributes.metadata ?? {} ),
+                                    name: ensureMetadataName( attributes, name ),
+                                },
+                            } ) }
                         >
                             { __( 'Enable PSP for this block', 'pattern-sync-pro' ) }
                         </Button>
@@ -96,7 +114,23 @@ export function PspAuthorPanel( { attributes, setAttributes } ) {
     const allOpen     = lockedCount === 0;
 
     const applyLock = ( newLock ) => {
-        setAttributes( { pspLock: newLock } );
+        const updates = { pspLock: newLock };
+
+        if ( Object.keys( newLock ).length > 0 ) {
+            // Ensure metadata.name is set — the stable override key for
+            // both WP native (Phase 4) and PSP storage (Phase 5).
+            updates.metadata = {
+                ...( attributes.metadata ?? {} ),
+                name: ensureMetadataName( attributes, name ),
+            };
+        } else {
+            // PSP removed — clear metadata.name so WP doesn't interpret
+            // this block as having outstanding bindings.
+            const { name: _n, ...restMeta } = attributes.metadata ?? {};
+            updates.metadata = Object.keys( restMeta ).length > 0 ? restMeta : undefined;
+        }
+
+        setAttributes( updates );
     };
 
     const updateLock  = ( group, value ) => applyLock( { ...pspLock, [ group ]: value } );

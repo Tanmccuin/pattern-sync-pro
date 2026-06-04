@@ -106,32 +106,50 @@ export const PSP_Pattern_Lock_JS = {
 };
 
 /**
- * Generate a stable, deterministic key for a block within a synced pattern.
+ * Generate the stable key for a block within a synced pattern.
  *
- * The key is "{shortBlockType}-{indexWithinType}", e.g. "paragraph-0",
- * "heading-0", "paragraph-1". It is computed from the block's position in
- * the flat descendant list of the core/block wrapper, making it stable
- * across page loads as long as the pattern structure doesn't change.
+ * Phase 2 of the v0.2.0-alpha refactor introduces `metadata.name` as the
+ * canonical, author-assigned override key. When present it takes priority
+ * over the legacy positional key so PSP keys are compatible with WP's own
+ * `core/pattern-overrides` storage format (which also uses metadata.name).
  *
- * This replaces the old random pspInstanceId approach. Because the key is
- * derived from position rather than stored in an attribute, it works even
- * when the post only serialises <!-- wp:block {"ref":14} /-->.
+ * Priority:
+ *   1. block.attributes.metadata.name — set by PspAuthorPanel when PSP is
+ *      enabled on the block; stable across page loads and pattern edits.
+ *   2. Positional fallback — "{shortBlockType}-{indexWithinType}" for blocks
+ *      that haven't been through the Author Panel yet. Works the same as
+ *      before; used during the transition while old data still exists.
+ *
+ * Only includes blocks that are genuine descendants of the specified wrapper
+ * (parent-chain verified) to prevent cross-pattern contamination when multiple
+ * synced patterns are on the same page.
  *
  * @param {Object} blockStore        wp.data.select('core/block-editor')
  * @param {string} coreBlockClientId ClientId of the core/block wrapper.
  * @param {string} targetClientId    ClientId of the block to key.
- * @return {string|null} e.g. "paragraph-0", or null if not found.
+ * @return {string|null}
  */
 export function generateBlockKey( blockStore, coreBlockClientId, targetClientId ) {
-    const allIds    = blockStore.getClientIdsWithDescendants?.( coreBlockClientId ) ?? [];
-    const allBlocks = allIds.map( id => blockStore.getBlock( id ) ).filter( Boolean );
+    const allIds = blockStore.getClientIdsWithDescendants?.( coreBlockClientId ) ?? [];
+
+    // Verify parent chain — prevents blocks from other patterns bleeding in.
+    const ownIds = allIds.filter( id =>
+        ( blockStore.getBlockParents?.( id ) ?? [] ).includes( coreBlockClientId )
+    );
+    const allBlocks = ownIds.map( id => blockStore.getBlock( id ) ).filter( Boolean );
 
     const target = allBlocks.find( b => b.clientId === targetClientId );
     if ( ! target ) return null;
 
-    const shortName   = target.name.replace( /^core\//, '' );
-    const sameType    = allBlocks.filter( b => b.name === target.name );
-    const index       = sameType.findIndex( b => b.clientId === targetClientId );
+    // ── Priority 1: metadata.name (stable, author-assigned) ──────────────────
+    if ( target.attributes?.metadata?.name ) {
+        return target.attributes.metadata.name;
+    }
+
+    // ── Priority 2: positional fallback ──────────────────────────────────────
+    const shortName = target.name.replace( /^core\//, '' ).replace( /\//g, '-' );
+    const sameType  = allBlocks.filter( b => b.name === target.name );
+    const index     = sameType.findIndex( b => b.clientId === targetClientId );
 
     return `${ shortName }-${ index }`;
 }

@@ -105,11 +105,14 @@ class PSP_Block_Renderer {
                 continue;
             }
 
-            // Generate the position key for this block.
-            $short_type = str_replace( 'core/', '', $block['blockName'] );
+            // Determine the override key — mirrors generateBlockKey() in JS.
+            // Priority 1: metadata.name (stable, set by PspAuthorPanel).
+            // Priority 2: positional fallback (legacy / unconfigured blocks).
+            $short_type = str_replace( '/', '-', str_replace( 'core/', '', $block['blockName'] ) );
             $index      = $type_counts[ $short_type ] ?? 0;
-            $type_counts[ $short_type ] = $index + 1;
-            $key = "{$short_type}-{$index}";
+            $type_counts[ $short_type ] = $index + 1; // Always increment for correct positional fallback on subsequent blocks.
+
+            $key = $block['attrs']['metadata']['name'] ?? "{$short_type}-{$index}";
 
             // Apply override attrs if we have one for this key.
             if ( isset( $overrides[ $key ] ) ) {

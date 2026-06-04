@@ -118,6 +118,7 @@ const withPspInspector = createHigherOrderComponent( ( BlockEdit ) => {
                 { /* Author view — editing the source pattern */ }
                 { isPatternSource && (
                     <PspAuthorPanel
+                        name={ name }
                         attributes={ attributes }
                         setAttributes={ setAttributes }
                     />
