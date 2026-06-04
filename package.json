@@ -1,6 +1,6 @@
 {
   "name": "pattern-sync-pro",
-  "version": "0.1.11-alpha",
+  "version": "0.2.0-alpha",
   "description": "Field-level sync control for WordPress block patterns",
   "private": true,
   "scripts": {

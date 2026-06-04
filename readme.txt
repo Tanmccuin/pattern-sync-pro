@@ -4,7 +4,7 @@ Tags:              blocks, patterns, synced patterns, block editor, full-site-ed
 Requires at least: 7.0
 Tested up to:      7.0
 Requires PHP:      8.1
-Stable tag:        0.1.11-alpha
+Stable tag:        0.2.0-alpha
 License:           GPL-2.0-or-later
 License URI:       https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -83,7 +83,7 @@ No measurable impact. The front-end renderer is a single `render_block` filter t
 
 == Changelog ==
 
-= 0.1.11-alpha =
+= 0.2.0-alpha =
 * Initial alpha release.
 * Core architecture: pspLock attribute groups, pspOverrides storage, PHP render_block application.
 * WP 7.0+ compatible — sidebar-based editing model with front-end render-time override application.
@@ -96,5 +96,5 @@ No measurable impact. The front-end renderer is a single `render_block` filter t
 
 == Upgrade Notice ==
 
-= 0.1.11-alpha =
+= 0.2.0-alpha =
 Alpha release — not recommended for production use. API and data structures may change before stable release.

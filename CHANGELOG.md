@@ -1,5 +1,48 @@
 # Changelog
 
+---
+
+## [0.2.0-alpha] — In Progress
+
+### Architectural refactor — WP-native compatibility model
+
+PSP is being rebuilt to sit ON TOP of WordPress's native pattern override
+system rather than parallel to it. The core principle: for anything WP
+natively supports, PSP defers to WP's storage and rendering so the user
+is never locked out of core functionality if PSP is disabled.
+
+**New storage model:**
+Override data moves from PSP's custom `pspOverrides` attribute to WP's
+native `core/block` `content` attribute — the same format WP uses for
+its own `core/pattern-overrides` binding source. One storage format for
+all blocks, all libraries.
+
+**New binding source:**
+PSP registers a custom `psp/overrides` binding source that is
+storage-compatible with `core/pattern-overrides`. Works for any block,
+not just the 4 WP natively supports. As third-party block libraries
+add bindings support, they automatically gain canvas editing capability
+without PSP changes.
+
+**Graceful degradation tiers:**
+- Tier 1 (WP-supported core blocks + content group): uses `core/pattern-overrides`
+  directly. PSP disabled → WP native handles it completely.
+- Tier 2 (third-party blocks, other groups): uses `psp/overrides` source.
+  PSP disabled → data persists inert, nothing breaks.
+- Tier 3 (Pro: design/layout overrides, history, roles): PSP-specific only.
+
+**Refactor phases:**
+- [ ] Phase 1 — Version bump + architecture documentation (this entry)
+- [ ] Phase 2 — Stable key scheme: `metadata.name` as universal override key
+- [ ] Phase 3 — Register `psp/overrides` custom binding source
+- [ ] Phase 4 — Author Panel writes correct bindings per block type
+- [ ] Phase 5 — Storage migration: `pspOverrides` → `core/block.content`
+- [ ] Phase 6 — PHP renderer alignment with new storage
+- [ ] Phase 7 — Lock enforcement + graceful degradation verification
+- [ ] Phase 8 — Cleanup + final release commit
+
+---
+
 All notable changes to Pattern Sync Pro will be documented here.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).

@@ -3,7 +3,7 @@
  * Plugin Name:       Pattern Sync Pro
  * Plugin URI:        https://patternsyncpro.com
  * Description:       Field-level sync control for WordPress block patterns. Lock layout and design while freeing content — per block, per attribute group.
- * Version:           0.1.11-alpha
+ * Version:           0.2.0-alpha
  * Requires at least: 6.4
  * Requires PHP:      8.1
  * Author:            Tannermooredesign
@@ -19,7 +19,7 @@
 defined( 'ABSPATH' ) || exit;
 
 // Plugin constants.
-define( 'PSP_VERSION',     '0.1.11-alpha' );
+define( 'PSP_VERSION',     '0.2.0-alpha' );
 define( 'PSP_FILE',        __FILE__ );
 define( 'PSP_DIR',         plugin_dir_path( __FILE__ ) );
 define( 'PSP_URL',         plugin_dir_url( __FILE__ ) );
