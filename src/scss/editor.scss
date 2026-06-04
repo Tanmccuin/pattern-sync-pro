@@ -424,13 +424,11 @@ $psp-font-base:      13px;
 
 .psp-instance-panel {
 
-    // Lock shield — persistent warning when locked groups are present.
-    // Prevents editors from being surprised when changes revert silently.
+    // Lock shield — warning when locked groups are present.
     .psp-lock-shield {
         display:       flex;
         align-items:   flex-start;
         gap:           8px;
-        margin-bottom: 12px;
         padding:       10px 11px;
         background:    #fff8f0;
         border:        1px solid #f0c070;
@@ -438,7 +436,7 @@ $psp-font-base:      13px;
         border-radius: $psp-radius;
 
         .psp-lock-shield__icon {
-            font-size:   16px;
+            font-size:   18px;
             flex-shrink: 0;
             margin-top:  1px;
         }
@@ -462,6 +460,51 @@ $psp-font-base:      13px;
             }
         }
     }
+
+// ── Inspector lock overlay ─────────────────────────────────────────────────────
+//
+// Applied when PspLockShield injects `.psp-inspector--has-locks` on
+// `.block-editor-block-inspector`. Overlays all panels in the inspector
+// (the block library's own controls) EXCEPT PSP's own lock shield panel.
+//
+// Result: Stackable/Kadence/etc. controls appear dimmed behind a semi-
+// transparent overlay with a lock icon centred over them — making the
+// locked state impossible to miss while still showing what's there.
+
+.block-editor-block-inspector.psp-inspector--has-locks {
+    position: relative;
+
+    // Dim everything inside the inspector
+    .components-panel__body:not(.psp-lock-shield-panel) {
+        position: relative;
+
+        &::after {
+            content:        '';
+            position:       absolute;
+            inset:          0;
+            background:     rgba(15, 15, 15, 0.45);
+            border-radius:  2px;
+            pointer-events: none;
+            z-index:        100;
+        }
+    }
+
+    // Lock icon centred over the dimmed area — appears once, floating
+    // over the first non-PSP panel
+    .components-panel__body:not(.psp-lock-shield-panel):first-of-type {
+        &::before {
+            content:          '🔒';
+            position:         absolute;
+            top:              50%;
+            left:             50%;
+            transform:        translate(-50%, -50%);
+            font-size:        28px;
+            z-index:          101;
+            pointer-events:   none;
+            filter:           drop-shadow(0 2px 4px rgba(0,0,0,0.4));
+        }
+    }
+}
 
     // Pattern source link — styled as a data row
     .psp-pattern-link {

@@ -15,6 +15,7 @@ import { initLockEnforcement }  from './store/lock-enforcement';
 import { PspAuthorPanel }       from './components/PspAuthorPanel';
 import { PspInstancePanel }     from './components/PspInstancePanel';
 import { PspPatternPanel }      from './components/PspPatternPanel';
+import { PspLockShield }        from './components/PspLockShield';
 import { withPspLockIndicator } from './components/PspLockIndicator';
 
 // Store-level lock enforcement — must run after stores are registered.
@@ -132,9 +133,12 @@ const withPspInspector = createHigherOrderComponent( ( BlockEdit ) => {
                     />
                 ) }
 
-                { /* Inner block fallback — shown when navigating into individual blocks */ }
+                { /* Inner block: lock shield only — no full panel to avoid Stackable
+                     tab duplication. Full override UI lives in PspPatternPanel.
+                     Shield opens when locked groups are present so editors see
+                     the warning regardless of which block library tab is active. */ }
                 { isPatternInstance && coreBlockClientId && (
-                    <PspInstancePanel
+                    <PspLockShield
                         blockName={ name }
                         attributes={ attributes }
                         patternId={ patternId }
