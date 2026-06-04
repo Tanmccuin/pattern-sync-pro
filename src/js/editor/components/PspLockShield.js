@@ -18,9 +18,11 @@ import { __, sprintf }        from '@wordpress/i18n';
 import { lock }               from '@wordpress/icons';
 import { PSP_Pattern_Lock_JS } from '../utils/lock-utils';
 
-// CSS class injected on the inspector element when locked groups are active.
-// Used by editor.scss to overlay a lock shield over the block library's controls.
-const LOCKED_CLASS = 'psp-inspector--has-locks';
+// CSS class injected on document.body when locked groups are active.
+// Injecting on body is more reliable than targeting the inspector element
+// since block libraries (Stackable, Kadence) may replace or wrap the
+// standard .block-editor-block-inspector container.
+const LOCKED_CLASS = 'psp-has-locked-controls';
 
 export function PspLockShield( { attributes } ) {
     const lockMask     = PSP_Pattern_Lock_JS.getLockMask( attributes.pspLock );
@@ -29,19 +31,15 @@ export function PspLockShield( { attributes } ) {
         .map( ( [ g ] ) => g.charAt( 0 ).toUpperCase() + g.slice( 1 ) );
     const hasLocks = lockedGroups.length > 0;
 
-    // Inject / remove a CSS class on the block inspector wrapper so that
-    // our CSS can overlay the block library controls that follow.
+    // Inject / remove a CSS class on document.body.
+    // CSS then targets block library panel elements as descendants.
     useEffect( () => {
-        const inspector = document.querySelector( '.block-editor-block-inspector' );
-        if ( ! inspector ) return;
-
         if ( hasLocks ) {
-            inspector.classList.add( LOCKED_CLASS );
+            document.body.classList.add( LOCKED_CLASS );
         } else {
-            inspector.classList.remove( LOCKED_CLASS );
+            document.body.classList.remove( LOCKED_CLASS );
         }
-
-        return () => inspector.classList.remove( LOCKED_CLASS );
+        return () => document.body.classList.remove( LOCKED_CLASS );
     }, [ hasLocks ] );
 
     if ( ! hasLocks ) return null;

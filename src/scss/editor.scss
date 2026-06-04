@@ -463,45 +463,68 @@ $psp-font-base:      13px;
 
 // ── Inspector lock overlay ─────────────────────────────────────────────────────
 //
-// Applied when PspLockShield injects `.psp-inspector--has-locks` on
-// `.block-editor-block-inspector`. Overlays all panels in the inspector
-// (the block library's own controls) EXCEPT PSP's own lock shield panel.
+// Applied when PspLockShield injects `.psp-has-locked-controls` on body.
+// Targets block library panel bodies (Stackable .ugb-toggle-panel-body,
+// WP standard .components-panel__body) — NOT PSP's own panels.
 //
-// Result: Stackable/Kadence/etc. controls appear dimmed behind a semi-
-// transparent overlay with a lock icon centred over them — making the
-// locked state impossible to miss while still showing what's there.
+// ::before = semi-transparent dim overlay
+// ::after  = centered lock icon over the dimmed panel
+//
+// pointer-events: none on both so devs can still inspect in DevTools.
 
-.block-editor-block-inspector.psp-inspector--has-locks {
+// ── Stackable panels ──────────────────────────────────────────────────────────
+body.psp-has-locked-controls .ugb-toggle-panel-body {
     position: relative;
 
-    // Dim everything inside the inspector
-    .components-panel__body:not(.psp-lock-shield-panel) {
+    &::before {
+        content:        '';
+        position:       absolute;
+        inset:          0;
+        background:     rgba(15, 15, 15, 0.38);
+        border-radius:  3px;
+        pointer-events: none;
+        z-index:        200;
+    }
+
+    &::after {
+        content:        '🔒';
+        position:       absolute;
+        top:            50%;
+        left:           50%;
+        transform:      translate(-50%, -50%);
+        font-size:      22px;
+        pointer-events: none;
+        z-index:        201;
+        filter:         drop-shadow(0 1px 4px rgba(0, 0, 0, 0.6));
+    }
+}
+
+// ── WP standard + Kadence + GenerateBlocks panels ─────────────────────────────
+// Exclude PSP's own panels and Stackable (already handled above).
+body.psp-has-locked-controls {
+    .components-panel__body:not(.psp-panel):not(.psp-lock-shield-panel):not(.ugb-toggle-panel-body) {
         position: relative;
 
-        &::after {
+        &::before {
             content:        '';
             position:       absolute;
             inset:          0;
-            background:     rgba(15, 15, 15, 0.45);
-            border-radius:  2px;
+            background:     rgba(15, 15, 15, 0.38);
+            border-radius:  3px;
             pointer-events: none;
-            z-index:        100;
+            z-index:        200;
         }
-    }
 
-    // Lock icon centred over the dimmed area — appears once, floating
-    // over the first non-PSP panel
-    .components-panel__body:not(.psp-lock-shield-panel):first-of-type {
-        &::before {
-            content:          '🔒';
-            position:         absolute;
-            top:              50%;
-            left:             50%;
-            transform:        translate(-50%, -50%);
-            font-size:        28px;
-            z-index:          101;
-            pointer-events:   none;
-            filter:           drop-shadow(0 2px 4px rgba(0,0,0,0.4));
+        &::after {
+            content:        '🔒';
+            position:       absolute;
+            top:            50%;
+            left:           50%;
+            transform:      translate(-50%, -50%);
+            font-size:      22px;
+            pointer-events: none;
+            z-index:        201;
+            filter:         drop-shadow(0 1px 4px rgba(0, 0, 0, 0.6));
         }
     }
 }
