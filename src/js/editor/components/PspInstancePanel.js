@@ -164,7 +164,7 @@ export function PspInstancePanel( {
             <PanelBody
                 title={ __( 'Pattern Sync Pro', 'pattern-sync-pro' ) }
                 icon={ lock }
-                initialOpen={ freeGroups.length > 0 }
+                initialOpen={ false }
                 className="psp-panel psp-instance-panel"
             >
                 { /* Pattern source link */ }

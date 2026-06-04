@@ -44,10 +44,24 @@ $psp-font-base:      13px;
 // ── Shared panel shell ────────────────────────────────────────────────────────
 
 .psp-panel {
-    // Override WP's PanelBody default padding to give us full control
+    // PSP panel title — distinctive styling so editors can find it among
+    // third-party block library panels (Stackable, Kadence, etc.).
+    // Uses the PSP accent colour with a subtle left bar as a visual marker.
     .components-panel__body-title button {
-        font-size:   $psp-font-base;
-        font-weight: 600;
+        font-size:    $psp-font-base;
+        font-weight:  600;
+        color:        $psp-pro !important;
+        border-left:  3px solid rgba($psp-pro, 0.35);
+        padding-left: 10px !important;
+        transition:   border-color 0.15s, color 0.15s;
+
+        &:hover {
+            border-left-color: $psp-pro;
+            color: #6820c8 !important;  // slightly darker on hover
+        }
+
+        // Lock icon picks up the accent colour
+        svg { fill: $psp-pro !important; }
     }
 
     // Thin divider with a floating label — used between sections
