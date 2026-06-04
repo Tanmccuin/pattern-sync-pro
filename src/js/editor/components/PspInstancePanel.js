@@ -164,9 +164,26 @@ export function PspInstancePanel( {
             <PanelBody
                 title={ __( 'Pattern Sync Pro', 'pattern-sync-pro' ) }
                 icon={ lock }
-                initialOpen={ false }
+                initialOpen={ lockedGroups.length > 0 }
                 className="psp-panel psp-instance-panel"
             >
+                { /* ── Lock shield — shown when any group is locked ── */ }
+                { lockedGroups.length > 0 && (
+                    <div className="psp-lock-shield">
+                        <span className="psp-lock-shield__icon" aria-hidden="true">🔒</span>
+                        <div className="psp-lock-shield__body">
+                            <strong>{ __( 'Some controls are locked', 'pattern-sync-pro' ) }</strong>
+                            <p>
+                                { sprintf(
+                                    /* translators: comma-separated group names */
+                                    __( '%s — changes will be reverted. Edit the source pattern to unlock.', 'pattern-sync-pro' ),
+                                    lockedGroups.map( g => g.charAt( 0 ).toUpperCase() + g.slice( 1 ) ).join( ', ' )
+                                ) }
+                            </p>
+                        </div>
+                    </div>
+                ) }
+
                 { /* Pattern source link */ }
                 { patternEditUrl && (
                     <a

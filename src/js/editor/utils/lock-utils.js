@@ -21,23 +21,114 @@ export const LOCK_GROUPS = LOCK_GROUPS_FROM_PHP ?? {
 // Shape: { 'kadence/advancedheading': { design: ['color', ...], ... }, ... }
 const BLOCK_LOCK_GROUPS = BLOCK_LOCK_GROUPS_FROM_PHP ?? {};
 
+// ── Naming-pattern classifiers for third-party block attribute discovery ─────
+//
+// Rather than maintaining an exhaustive per-attribute list for each block,
+// these patterns match attribute names to PSP lock groups dynamically.
+// Applied to ALL registered attributes of a block when no explicit compat
+// entry exists — covers future blocks and library updates automatically.
+
+const ATTR_PATTERNS = {
+    // Design must come before layout — border*, background* are design not layout
+    design: [
+        /color/i, /colour/i, /background/i, /gradient/i, /shadow/i,
+        /opacity/i, /blur/i, /border/i, /outline/i, /radius/i,
+        /font/i, /typography/i, /letter/i, /lineHeight/i, /textSize/i,
+        /textTransform/i, /textDecoration/i, /effect/i, /animation/i,
+        /entrance/i, /transition/i, /tint/i, /overlay/i, /filter/i,
+        /blockBackground/i, /blockBorder/i, /blockShadow/i,
+        /zIndex/i, /^overflow$/i, /^clear$/i,
+    ],
+    layout: [
+        /margin/i, /padding/i, /width/i, /height/i, /align/i, /gap/i,
+        /column/i, /flex/i, /orientation/i, /vertical/i, /horizontal/i,
+        /position/i, /offset/i, /order/i, /wrap/i, /shrink/i, /grow/i,
+        /blockHeight/i, /blockWidth/i, /blockVertical/i, /contentAlign/i,
+    ],
+    content: [
+        /^text$/, /^url$/, /^alt$/, /^caption$/, /^label$/, /^title$/,
+        /^href$/, /^src$/, /^content$/, /^value$/, /imageUrl/i,
+        /imageAlt/i, /mediaUrl/i, /mediaAlt/i, /headingTitle/i,
+        /subheading/i, /description/i, /buttonText/i, /linkUrl/i,
+    ],
+    visibility: [
+        /^hide/i, /hideMobile/i, /hideTablet/i, /hideDesktop/i,
+        /^show(?!Text|Button|Icon)/i, /displayCondition/i, /^visible/i,
+        /responsive.*hide/i, /^collapse/i,
+    ],
+    classes: [
+        /^className$/, /^anchor$/, /^htmlTag$/i, /customCss/i,
+        /customAttributes/i, /extraClass/i, /additionalClass/i,
+    ],
+};
+
+/**
+ * Derive lock group membership for all REGISTERED attributes of a block
+ * using naming patterns. Used when no explicit compat entry exists.
+ * Results are cached per block type to avoid repeated registry lookups.
+ *
+ * @param {string} blockName
+ * @return {Object} group → string[] map (additions only, not merged with base)
+ */
+const _registryCache = new Map();
+
+function getLockGroupsFromRegistry( blockName ) {
+    if ( _registryCache.has( blockName ) ) return _registryCache.get( blockName );
+
+    const blockType = typeof wp !== 'undefined' && wp.blocks?.getBlockType?.( blockName );
+    if ( ! blockType ) return {};
+
+    const additions = { layout: [], design: [], content: [], visibility: [], classes: [] };
+
+    for ( const attrKey of Object.keys( blockType.attributes ?? {} ) ) {
+        // Skip WP-internal and PSP attrs.
+        if ( [ 'uniqueId', 'generateCss', 'pspLock', 'className', 'anchor' ].includes( attrKey ) ) continue;
+
+        let matched = false;
+        for ( const [ group, patterns ] of Object.entries( ATTR_PATTERNS ) ) {
+            if ( patterns.some( p => p.test( attrKey ) ) ) {
+                additions[ group ].push( attrKey );
+                matched = true;
+                break; // First match wins
+            }
+        }
+    }
+
+    // Remove empty groups
+    for ( const g of Object.keys( additions ) ) {
+        if ( additions[ g ].length === 0 ) delete additions[ g ];
+    }
+
+    _registryCache.set( blockName, additions );
+    return additions;
+}
+
 /**
  * Return the effective lock groups for a given block type.
- * Merges the core baseline with any block-specific additions from active
- * third-party library mappings.
  *
- * @param {string} [blockName] e.g. 'kadence/advancedheading'
+ * Priority:
+ * 1. Core LOCK_GROUPS baseline (always included)
+ * 2. Explicit compat entries from PHP (blockLockGroups)
+ * 3. Pattern-derived additions from WP block registry (for any unrecognised block)
+ *
+ * @param {string} [blockName] e.g. 'stackable/text'
  * @return {Object} group → string[] map
  */
 export function getLockGroupsForBlock( blockName = '' ) {
-    const extra = blockName ? ( BLOCK_LOCK_GROUPS[ blockName ] ?? {} ) : {};
-    if ( Object.keys( extra ).length === 0 ) return LOCK_GROUPS;
+    // Explicit compat entry from PHP (highest specificity)
+    const explicit = blockName ? ( BLOCK_LOCK_GROUPS[ blockName ] ?? {} ) : {};
 
+    // Pattern-derived additions from block registry (covers all third-party blocks)
+    const derived = blockName ? getLockGroupsFromRegistry( blockName ) : {};
+
+    // Merge: base + explicit + derived, deduplicating
     const merged = {};
     for ( const group of Object.keys( LOCK_GROUPS ) ) {
-        const base      = LOCK_GROUPS[ group ] ?? [];
-        const additions = extra[ group ]       ?? [];
-        merged[ group ] = [ ...new Set( [ ...base, ...additions ] ) ];
+        merged[ group ] = [ ...new Set( [
+            ...( LOCK_GROUPS[ group ]  ?? [] ),
+            ...( explicit[ group ]     ?? [] ),
+            ...( derived[ group ]      ?? [] ),
+        ] ) ];
     }
     return merged;
 }

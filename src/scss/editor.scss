@@ -424,6 +424,45 @@ $psp-font-base:      13px;
 
 .psp-instance-panel {
 
+    // Lock shield — persistent warning when locked groups are present.
+    // Prevents editors from being surprised when changes revert silently.
+    .psp-lock-shield {
+        display:       flex;
+        align-items:   flex-start;
+        gap:           8px;
+        margin-bottom: 12px;
+        padding:       10px 11px;
+        background:    #fff8f0;
+        border:        1px solid #f0c070;
+        border-left:   4px solid #d08000;
+        border-radius: $psp-radius;
+
+        .psp-lock-shield__icon {
+            font-size:   16px;
+            flex-shrink: 0;
+            margin-top:  1px;
+        }
+
+        .psp-lock-shield__body {
+            flex: 1;
+
+            strong {
+                display:       block;
+                font-size:     $psp-font-sm;
+                font-weight:   700;
+                color:         #7a4000;
+                margin-bottom: 3px;
+            }
+
+            p {
+                margin:      0;
+                font-size:   $psp-font-xs;
+                color:       #7a4000;
+                line-height: 1.5;
+            }
+        }
+    }
+
     // Pattern source link — styled as a data row
     .psp-pattern-link {
         display:         flex;
