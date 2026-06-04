@@ -254,10 +254,10 @@ export function PspInstancePanel( {
                                         );
                                     } ) }
 
-                                    { /* For non-content free groups, show a note */ }
-                                    { group !== 'content' && ! isPro && (
-                                        <p className="psp-muted psp-field-note">
-                                            { __( 'Edit in source pattern. Pro: per-attribute override inputs.', 'pattern-sync-pro' ) }
+                                    { /* For non-content groups: guide the editor to use the block's own controls */ }
+                                    { group !== 'content' && editableAttrs.length === 0 && (
+                                        <p className="psp-field-note">
+                                            { __( 'Use this block\'s sidebar controls to override. PSP captures changes automatically.', 'pattern-sync-pro' ) }
                                         </p>
                                     ) }
                                 </div>

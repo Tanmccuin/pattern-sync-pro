@@ -404,6 +404,13 @@ export function PspPatternPanel( { coreBlockClientId, patternId } ) {
                                             </div>
                                         );
                                     } ) }
+
+                                    { /* For non-content groups: guide the editor to use the block's own controls */ }
+                                    { group !== 'content' && editableAttrs.length === 0 && (
+                                        <p className="psp-field-note">
+                                            { __( 'Use this block\'s sidebar controls to override. PSP captures changes automatically.', 'pattern-sync-pro' ) }
+                                        </p>
+                                    ) }
                                 </div>
                             );
                         } ) }
