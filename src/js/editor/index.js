@@ -147,10 +147,14 @@ const withPspInspector = createHigherOrderComponent( ( BlockEdit ) => {
     };
 }, 'withPspInspector' );
 
+// Priority 100 (runs after default 10) so PSP wraps innermost — its
+// InspectorControls fills are added to the slot AFTER other plugins
+// (Stackable, Kadence, etc.), placing them below rather than above.
 addFilter(
     'editor.BlockEdit',
     'pattern-sync-pro/with-psp-inspector',
-    withPspInspector
+    withPspInspector,
+    100
 );
 
 // ── 3. Lock indicator ─────────────────────────────────────────────────────────
