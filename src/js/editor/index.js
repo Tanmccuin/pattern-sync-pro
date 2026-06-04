@@ -38,11 +38,9 @@ addFilter(
         };
 
         if ( name === 'core/block' ) {
-            extra.pspOverrides = { type: 'object', default: {} };
-            // `content` is WP's native per-instance override storage attribute.
-            // We register it here so PSP can read/write it alongside pspOverrides
-            // during the Phase 5 migration. WP core already registers this on
-            // core/block — this is a no-op if it's already registered.
+            // `content` is WP's native per-instance override storage attribute,
+            // shared by core/pattern-overrides and psp/overrides binding sources.
+            // WP core already registers this — this ensures PSP can read/write it.
             extra.content = { type: 'object', default: {} };
         }
 

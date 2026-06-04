@@ -282,11 +282,9 @@ export function PspPatternPanel( { coreBlockClientId, patternId } ) {
 
         const coreBlock = blockStore.getBlock( coreBlockClientId );
 
-        // Phase 5: read from `content` (WP-native) with fallback to legacy
-        // `pspOverrides` so old data still displays before migration runs.
-        const overrides = Object.keys( coreBlock?.attributes?.content ?? {} ).length > 0
-            ? ( coreBlock?.attributes?.content ?? {} )
-            : ( coreBlock?.attributes?.pspOverrides ?? {} );
+        // Read overrides from `content` — WP-native storage shared with
+        // core/pattern-overrides. pspOverrides is no longer used (Phase 8).
+        const overrides = coreBlock?.attributes?.content ?? {};
 
         return { pspBlocks, overrides };
     }, [ coreBlockClientId ] );
@@ -330,11 +328,8 @@ export function PspPatternPanel( { coreBlockClientId, patternId } ) {
         }
 
         if ( Object.keys( migrated ).length > 0 ) {
-            if ( DEBUG ) console.log( '[PSP] migrating pspOverrides → content', migrated );
-            updateBlockAttributes( coreBlockClientId, {
-                content:      migrated,
-                pspOverrides: {},   // Clear legacy data after migration.
-            } );
+            if ( DEBUG ) console.log( '[PSP] migrating legacy pspOverrides → content', migrated );
+            updateBlockAttributes( coreBlockClientId, { content: migrated } );
         }
     }, [ coreBlockClientId ] );
 

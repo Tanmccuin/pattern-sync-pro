@@ -39,7 +39,7 @@ without PSP changes.
 - [x] Phase 5 — Storage migration: `pspOverrides` → `core/block.content`
 - [x] Phase 6 — PHP renderer alignment with new storage
 - [x] Phase 7 — Lock enforcement + graceful degradation verification
-- [ ] Phase 8 — Cleanup + final release commit
+- [x] Phase 8 — Cleanup + final release commit
 
 ---
 

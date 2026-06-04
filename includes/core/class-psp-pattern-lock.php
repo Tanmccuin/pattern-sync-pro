@@ -165,15 +165,22 @@ class PSP_Pattern_Lock {
     }
 
     /**
-     * Strip all PSP attributes from serialised post content.
+     * Strip all PSP-written attributes from serialised post content.
+     * Used during plugin uninstall to restore clean block markup.
      *
-     * Uses parse_blocks / serialize_blocks so nested JSON (pspOverrides) is
-     * handled correctly — a regex cannot reliably match arbitrary nesting.
+     * Uses parse_blocks / serialize_blocks so nested JSON is handled
+     * correctly — a regex cannot reliably match arbitrary nesting.
      *
-     * Attributes removed:
-     *   - pspLock       — on inner blocks inside source patterns
-     *   - pspOverrides  — on core/block wrappers in posts
-     *   - pspInstanceId — legacy; removed in v0.1.12 but stripped for safety
+     * Attributes removed from block attrs:
+     *   - pspLock        — on inner blocks in source patterns
+     *   - pspOverrides   — legacy storage (pre-v0.2.0), kept for safety
+     *   - pspInstanceId  — legacy; removed in v0.1.12 but stripped for safety
+     *
+     * On core/block wrappers, also removes content overrides and binding
+     * metadata written by PSP — restoring WP's default synced-pattern behaviour.
+     * NOTE: this also removes content written by core/pattern-overrides for
+     * Tier 1 blocks; authors will need to re-enter those overrides if they
+     * choose "full cleanup" uninstall mode. Documented in uninstall screen.
      *
      * @param string $post_content Raw post_content.
      * @return string Cleaned post_content.
@@ -185,7 +192,7 @@ class PSP_Pattern_Lock {
     }
 
     /**
-     * Recursively walk a block tree and remove PSP attributes.
+     * Recursively walk a block tree and remove PSP-written attributes.
      *
      * @param array $blocks
      * @return array
@@ -195,8 +202,27 @@ class PSP_Pattern_Lock {
 
         foreach ( $blocks as &$block ) {
             if ( ! empty( $block['attrs'] ) ) {
+                // Remove PSP-specific top-level attributes.
                 foreach ( $psp_keys as $key ) {
                     unset( $block['attrs'][ $key ] );
+                }
+
+                // Remove PSP-written metadata sub-keys (name, bindings).
+                // Preserves any non-PSP metadata the block already had.
+                if ( isset( $block['attrs']['metadata'] ) && is_array( $block['attrs']['metadata'] ) ) {
+                    unset( $block['attrs']['metadata']['name'] );
+                    unset( $block['attrs']['metadata']['bindings'] );
+                    // Drop the metadata attr entirely if nothing remains.
+                    if ( empty( $block['attrs']['metadata'] ) ) {
+                        unset( $block['attrs']['metadata'] );
+                    }
+                }
+
+                // Remove override data from core/block content attr.
+                // Only remove if the content is solely PSP data (object of
+                // override maps); leave intact if it has other WP-native data.
+                if ( $block['blockName'] === 'core/block' && isset( $block['attrs']['content'] ) ) {
+                    unset( $block['attrs']['content'] );
                 }
             }
 

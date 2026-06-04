@@ -69,7 +69,7 @@ Yes. PSP includes built-in attribute mappings for Kadence Blocks, GenerateBlocks
 
 = Where do overrides live in the database? =
 
-Overrides are stored directly in the post's block markup as a `pspOverrides` attribute on the `core/block` wrapper — the same place WordPress stores all block data. There is no separate database table for free-tier overrides.
+Overrides are stored in the post's block markup inside the `core/block` wrapper's `content` attribute — the same attribute and format that WordPress uses for its own native pattern overrides. There is no separate database table. PSP and WordPress share the same storage location, so disabling PSP leaves override data intact and WordPress continues to apply content overrides on Tier 1 blocks (Paragraph, Heading, Image, Button) natively.
 
 = Will this slow down my site? =
 

@@ -67,12 +67,9 @@ class PSP_Block_Renderer {
             return $block_content;
         }
 
-        // Read overrides from `content` (WP-native). Fall back to legacy
-        // `pspOverrides` for sites that have not yet run the JS migration.
+        // Overrides stored in `content` — WP-native format shared with
+        // core/pattern-overrides. Legacy pspOverrides removed (Phase 8).
         $overrides = $block['attrs']['content'] ?? [];
-        if ( empty( $overrides ) ) {
-            $overrides = $block['attrs']['pspOverrides'] ?? [];
-        }
         if ( empty( $overrides ) ) {
             return $block_content;
         }

@@ -43,12 +43,14 @@ class PSP_Instance_Registry {
             return;
         }
 
-        // Phase 5: overrides now live in the `content` attribute using the
-        // psp/overrides binding source. Also check legacy pspOverrides for
-        // sites that haven't migrated yet.
+        // A post is PSP-affected when it contains:
+        //   - psp/overrides binding source (instance with psp/overrides bindings)
+        //   - pspLock attribute (source pattern being saved to wp_block CPT)
+        // Legacy pspOverrides check retained as a migration safety net for
+        // posts that have not yet had the JS panel open to migrate the data.
         $has_psp = str_contains( $post->post_content, '"psp/overrides"' )
-                || str_contains( $post->post_content, '"pspOverrides"' )
-                || str_contains( $post->post_content, '"pspLock"' );
+                || str_contains( $post->post_content, '"pspLock"' )
+                || str_contains( $post->post_content, '"pspOverrides"' );
 
         $affected = get_option( PSP_OPTION_AFFECTED_POSTS, [] );
 
