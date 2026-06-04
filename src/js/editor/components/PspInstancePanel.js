@@ -2,30 +2,32 @@
  * PspInstancePanel — shown when an inner block of a PSP-managed pattern
  * instance is selected in the post editor.
  *
- * WP 7.0+ renders synced pattern inner blocks as static HTML — the canvas
- * is not directly editable. PSP provides sidebar editing fields for each
- * free-group attribute. Values are stored in the ancestor core/block's
- * `pspOverrides` attribute and applied at render time by PHP.
+ * Fallback panel for when the user navigates into individual inner blocks
+ * (e.g. via Outline view). The primary UX is PspPatternPanel on the
+ * core/block wrapper.
+ *
+ * Storage: reads and writes the ancestor core/block's `content` attribute —
+ * the same WP-native format used by core/pattern-overrides (v0.2.0-alpha).
  */
 
 import {
     PanelBody,
     Button,
-    Notice,
     Icon,
     TextareaControl,
     TextControl,
 } from '@wordpress/components';
-import { InspectorControls }          from '@wordpress/block-editor';
+import { InspectorControls }              from '@wordpress/block-editor';
 import { useSelect, useDispatch, select } from '@wordpress/data';
-import { useState }                   from '@wordpress/element';
-import { __, sprintf }                from '@wordpress/i18n';
-import { lock, external }             from '@wordpress/icons';
+import { useState }                       from '@wordpress/element';
+import { __, sprintf }                    from '@wordpress/i18n';
+import { lock, external }                 from '@wordpress/icons';
 import {
     PSP_Pattern_Lock_JS,
     LOCK_GROUPS,
     getLockGroupsForBlock,
     generateBlockKey,
+    getContentFields,
 } from '../utils/lock-utils';
 
 const { isPro, siteAdminUrl } = window.pspData ?? {};
@@ -38,18 +40,7 @@ const LOCK_GROUP_LABELS = {
     classes:    __( 'CSS Classes', 'pattern-sync-pro' ),
 };
 
-// Attributes in the content group that get editing fields in the free tier.
-// Keyed by attribute name → { label, control: 'textarea'|'text' }
-const CONTENT_FIELD_META = {
-    content:     { label: __( 'Content',     'pattern-sync-pro' ), control: 'textarea' },
-    url:         { label: __( 'URL',         'pattern-sync-pro' ), control: 'text' },
-    href:        { label: __( 'Link URL',    'pattern-sync-pro' ), control: 'text' },
-    alt:         { label: __( 'Alt text',    'pattern-sync-pro' ), control: 'text' },
-    caption:     { label: __( 'Caption',     'pattern-sync-pro' ), control: 'textarea' },
-    placeholder: { label: __( 'Placeholder', 'pattern-sync-pro' ), control: 'text' },
-    label:       { label: __( 'Label',       'pattern-sync-pro' ), control: 'text' },
-    title:       { label: __( 'Title',       'pattern-sync-pro' ), control: 'text' },
-};
+// Content fields now derived dynamically via getContentFields() from lock-utils.
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -77,14 +68,14 @@ export function PspInstancePanel( {
     const { updateBlockAttributes } = useDispatch( 'core/block-editor' );
     const [ confirmingRevertAll, setConfirmingRevertAll ] = useState( false );
 
-    // Read pspOverrides + blockKey from the core/block ancestor.
+    // Read overrides + blockKey from the core/block ancestor's `content` attr.
     const { blockOverrides, blockKey } = useSelect( ( sel ) => {
-        const blockStore   = sel( 'core/block-editor' );
-        const coreBlock    = blockStore.getBlock( coreBlockClientId );
-        const pspOverrides = coreBlock?.attributes?.pspOverrides ?? {};
-        const key          = generateBlockKey( blockStore, coreBlockClientId, blockClientId );
+        const blockStore = sel( 'core/block-editor' );
+        const coreBlock  = blockStore.getBlock( coreBlockClientId );
+        const content    = coreBlock?.attributes?.content ?? {};
+        const key        = generateBlockKey( blockStore, coreBlockClientId, blockClientId );
         return {
-            blockOverrides: key ? ( pspOverrides[ key ] ?? {} ) : {},
+            blockOverrides: key ? ( content[ key ] ?? {} ) : {},
             blockKey:       key,
         };
     }, [ coreBlockClientId, blockClientId ] );
@@ -113,10 +104,9 @@ export function PspInstancePanel( {
         const coreBlock  = blockStore.getBlock( coreBlockClientId );
         if ( ! coreBlock || ! blockKey ) return;
 
-        const existing     = coreBlock.attributes.pspOverrides ?? {};
-        const blockEntry   = { ...( existing[ blockKey ] ?? {} ) };
+        const existing   = coreBlock.attributes.content ?? {};
+        const blockEntry = { ...( existing[ blockKey ] ?? {} ) };
 
-        // If value matches source, remove the override entirely for this key.
         if ( value === ( sourceAttrs[ attrKey ] ?? '' ) ) {
             delete blockEntry[ attrKey ];
         } else {
@@ -129,8 +119,7 @@ export function PspInstancePanel( {
         } else {
             updated[ blockKey ] = blockEntry;
         }
-
-        updateBlockAttributes( coreBlockClientId, { pspOverrides: updated } );
+        updateBlockAttributes( coreBlockClientId, { content: updated } );
     };
 
     const resetGroup = ( group ) => {
@@ -138,9 +127,9 @@ export function PspInstancePanel( {
         const coreBlock  = blockStore.getBlock( coreBlockClientId );
         if ( ! coreBlock || ! blockKey ) return;
 
-        const existing    = coreBlock.attributes.pspOverrides ?? {};
-        const groupKeys   = LOCK_GROUPS[ group ] ?? [];
-        const blockEntry  = Object.fromEntries(
+        const existing   = coreBlock.attributes.content ?? {};
+        const groupKeys  = LOCK_GROUPS[ group ] ?? [];
+        const blockEntry = Object.fromEntries(
             Object.entries( existing[ blockKey ] ?? {} ).filter( ( [ k ] ) => ! groupKeys.includes( k ) )
         );
 
@@ -150,7 +139,7 @@ export function PspInstancePanel( {
         } else {
             updated[ blockKey ] = blockEntry;
         }
-        updateBlockAttributes( coreBlockClientId, { pspOverrides: updated } );
+        updateBlockAttributes( coreBlockClientId, { content: updated } );
     };
 
     const resetAll = () => {
@@ -158,9 +147,9 @@ export function PspInstancePanel( {
         const coreBlock  = blockStore.getBlock( coreBlockClientId );
         if ( ! coreBlock || ! blockKey ) return;
 
-        const updated = { ...( coreBlock.attributes.pspOverrides ?? {} ) };
+        const updated = { ...( coreBlock.attributes.content ?? {} ) };
         delete updated[ blockKey ];
-        updateBlockAttributes( coreBlockClientId, { pspOverrides: updated } );
+        updateBlockAttributes( coreBlockClientId, { content: updated } );
         setConfirmingRevertAll( false );
     };
 
@@ -204,13 +193,11 @@ export function PspInstancePanel( {
                         </div>
 
                         { freeGroups.map( group => {
-                            const isChanged  = groupHasOverrides( blockOverrides, group, effectiveLockGroups );
-                            // For the content group, render inline editing fields.
-                            const showFields = group === 'content';
-                            const groupAttrs = effectiveLockGroups[ group ] ?? LOCK_GROUPS[ group ] ?? [];
-                            // Only show fields for attrs that exist on this block.
-                            const editableAttrs = showFields
-                                ? groupAttrs.filter( k => k in CONTENT_FIELD_META && k in sourceAttrs )
+                            const isChanged     = groupHasOverrides( blockOverrides, group, effectiveLockGroups );
+                            const groupAttrs    = effectiveLockGroups[ group ] ?? LOCK_GROUPS[ group ] ?? [];
+                            // Dynamic content fields — works for any block library.
+                            const editableAttrs = group === 'content'
+                                ? getContentFields( blockName, groupAttrs, sourceAttrs )
                                 : [];
 
                             return (
@@ -239,17 +226,16 @@ export function PspInstancePanel( {
                                     </div>
 
                                     { /* Inline editing fields for content group */ }
-                                    { editableAttrs.map( attrKey => {
-                                        const meta         = CONTENT_FIELD_META[ attrKey ];
+                                    { editableAttrs.map( ( { attrKey, label, control } ) => {
                                         const currentValue = blockOverrides[ attrKey ] ?? sourceAttrs[ attrKey ] ?? '';
                                         const isOverridden = attrKey in blockOverrides;
 
                                         return (
                                             <div key={ attrKey } className="psp-field-row">
-                                                { meta.control === 'textarea' ? (
+                                                { control === 'textarea' ? (
                                                     <TextareaControl
                                                         __nextHasNoMarginBottom
-                                                        label={ meta.label }
+                                                        label={ label }
                                                         value={ currentValue }
                                                         onChange={ ( val ) => updateOverride( attrKey, val ) }
                                                         className={ isOverridden ? 'psp-field--overridden' : '' }
@@ -258,7 +244,7 @@ export function PspInstancePanel( {
                                                 ) : (
                                                     <TextControl
                                                         __nextHasNoMarginBottom
-                                                        label={ meta.label }
+                                                        label={ label }
                                                         value={ currentValue }
                                                         onChange={ ( val ) => updateOverride( attrKey, val ) }
                                                         className={ isOverridden ? 'psp-field--overridden' : '' }

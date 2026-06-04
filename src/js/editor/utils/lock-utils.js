@@ -153,3 +153,80 @@ export function generateBlockKey( blockStore, coreBlockClientId, targetClientId 
 
     return `${ shortName }-${ index }`;
 }
+
+// ── Content field utilities ───────────────────────────────────────────────────
+// Shared by PspPatternPanel and PspInstancePanel.
+
+/**
+ * Label/control overrides for known attribute keys.
+ * Optional — only needed to customise auto-derived labels or control types.
+ */
+export const CONTENT_FIELD_OVERRIDES = {
+    content:         { label: 'Content' },
+    caption:         { label: 'Caption' },
+    alt:             { label: 'Alt text',       control: 'text' },
+    placeholder:     { label: 'Placeholder',    control: 'text' },
+    headingTitle:    { label: 'Heading' },
+    subheadingTitle: { label: 'Subheading' },
+    imageAlt:        { label: 'Image alt text', control: 'text' },
+    altText:         { label: 'Alt text',       control: 'text' },
+    mediaAlt:        { label: 'Image alt text', control: 'text' },
+    ariaLabel:       { label: 'Aria label',     control: 'text' },
+};
+
+const URL_ATTR_PATTERN = /url|src|href|link/i;
+
+/** camelCase → Title Case: "headingTitle" → "Heading Title" */
+export function deriveFieldLabel( attrKey ) {
+    return attrKey
+        .replace( /([A-Z]+)/g, ' $1' )
+        .replace( /^./, s => s.toUpperCase() )
+        .trim();
+}
+
+/** Derive textarea vs text input from schema + name heuristics. */
+export function deriveFieldControl( attrKey, attrSchema ) {
+    if ( CONTENT_FIELD_OVERRIDES[ attrKey ]?.control ) {
+        return CONTENT_FIELD_OVERRIDES[ attrKey ].control;
+    }
+    if ( attrSchema?.source === 'html' )      return 'textarea';
+    if ( attrSchema?.source === 'text' )      return 'text';
+    if ( attrSchema?.source === 'attribute' ) return 'text';
+    return URL_ATTR_PATTERN.test( attrKey ) ? 'text' : 'textarea';
+}
+
+/**
+ * Resolve editable content fields for a block's content group.
+ *
+ * Derives fields dynamically from WP's block registry — no static whitelist
+ * needed. Works automatically for any block library.
+ *
+ * @param {string}   blockName   e.g. 'stackable/text'
+ * @param {string[]} groupAttrs  Content-group attribute keys for this block.
+ * @param {Object}   sourceAttrs Current block attributes (to check existence).
+ * @return {Array<{attrKey, label, control}>}
+ */
+export function getContentFields( blockName, groupAttrs, sourceAttrs ) {
+    const blockType       = wp.blocks?.getBlockType?.( blockName );
+    const registeredAttrs = blockType?.attributes ?? {};
+
+    return groupAttrs
+        .filter( attrKey => {
+            if ( ! ( attrKey in sourceAttrs ) ) return false;
+            const schema = registeredAttrs[ attrKey ];
+            if ( schema ) {
+                return schema.type === 'string'
+                    || [ 'html', 'text', 'attribute' ].includes( schema.source );
+            }
+            return typeof sourceAttrs[ attrKey ] === 'string';
+        } )
+        .map( attrKey => {
+            const schema   = registeredAttrs[ attrKey ];
+            const override = CONTENT_FIELD_OVERRIDES[ attrKey ] ?? {};
+            return {
+                attrKey,
+                label:   override.label   ?? deriveFieldLabel( attrKey ),
+                control: deriveFieldControl( attrKey, schema ),
+            };
+        } );
+}
