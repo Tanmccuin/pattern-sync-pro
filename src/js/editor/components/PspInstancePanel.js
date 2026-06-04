@@ -255,7 +255,7 @@ export function PspInstancePanel( {
                                     } ) }
 
                                     { /* For non-content free groups, show a note */ }
-                                    { ! showFields && ! isPro && (
+                                    { group !== 'content' && ! isPro && (
                                         <p className="psp-muted psp-field-note">
                                             { __( 'Edit in source pattern. Pro: per-attribute override inputs.', 'pattern-sync-pro' ) }
                                         </p>
