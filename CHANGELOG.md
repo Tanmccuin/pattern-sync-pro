@@ -38,7 +38,7 @@ without PSP changes.
 - [x] Phase 4 — Author Panel writes correct bindings per block type
 - [x] Phase 5 — Storage migration: `pspOverrides` → `core/block.content`
 - [x] Phase 6 — PHP renderer alignment with new storage
-- [ ] Phase 7 — Lock enforcement + graceful degradation verification
+- [x] Phase 7 — Lock enforcement + graceful degradation verification
 - [ ] Phase 8 — Cleanup + final release commit
 
 ---
