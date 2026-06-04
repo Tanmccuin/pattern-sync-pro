@@ -35,7 +35,7 @@ without PSP changes.
 - [ ] Phase 1 — Version bump + architecture documentation (this entry)
 - [x] Phase 2 — Stable key scheme: `metadata.name` as universal override key
 - [x] Phase 3 — Register `psp/overrides` custom binding source
-- [ ] Phase 4 — Author Panel writes correct bindings per block type
+- [x] Phase 4 — Author Panel writes correct bindings per block type
 - [ ] Phase 5 — Storage migration: `pspOverrides` → `core/block.content`
 - [ ] Phase 6 — PHP renderer alignment with new storage
 - [ ] Phase 7 — Lock enforcement + graceful degradation verification

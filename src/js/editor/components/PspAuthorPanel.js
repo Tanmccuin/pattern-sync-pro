@@ -17,6 +17,8 @@
 import { PanelBody, ToggleControl, Button } from '@wordpress/components';
 import { InspectorControls }               from '@wordpress/block-editor';
 import { __, sprintf }                     from '@wordpress/i18n';
+import { getBlockType }                    from '@wordpress/blocks';
+import { getLockGroupsForBlock }           from '../utils/lock-utils';
 
 const { isPro } = window.pspData ?? {};
 
@@ -55,6 +57,60 @@ const CONTENT_FREE = { layout: true, design: true, content: false, visibility: t
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
+// ── Binding helpers ───────────────────────────────────────────────────────────
+
+/**
+ * WP-native supported blocks and the specific attributes within each that
+ * core/pattern-overrides can handle. Everything else uses psp/overrides.
+ * Keep in sync with WP's block bindings support as it expands.
+ */
+const WP_NATIVE_BINDING_ATTRS = {
+    'core/paragraph': [ 'content' ],
+    'core/heading':   [ 'content' ],
+    'core/image':     [ 'url', 'alt', 'title' ],
+    'core/button':    [ 'url', 'text', 'linkTarget', 'rel' ],
+};
+
+/**
+ * Build the metadata.bindings object for a block given its new lock state.
+ *
+ * Only the content group gets bindings — that's the group with canvas-level
+ * editing support via WP's binding system. Design/layout/etc. are sidebar-only
+ * and handled via pspOverrides + PHP rendering.
+ *
+ * Source assignment:
+ *   - Attr is natively supported by WP for this block → core/pattern-overrides
+ *   - Everything else → psp/overrides
+ *
+ * @param {Object} lockMask  e.g. { layout: true, content: false, ... }
+ * @param {string} blockName e.g. 'core/paragraph' or 'stackable/text'
+ * @return {Object} bindings object (may be empty if content is locked)
+ */
+function buildBindings( lockMask, blockName ) {
+    // Content locked → no bindings needed.
+    if ( lockMask.content !== false ) return {};
+
+    const blockType       = getBlockType( blockName );
+    const registeredAttrs = Object.keys( blockType?.attributes ?? {} );
+    const contentAttrs    = getLockGroupsForBlock( blockName ).content ?? [];
+    const nativeAttrs     = WP_NATIVE_BINDING_ATTRS[ blockName ] ?? [];
+
+    const bindings = {};
+
+    for ( const attrKey of contentAttrs ) {
+        // Only bind attrs that are actually registered on this block type.
+        if ( ! registeredAttrs.includes( attrKey ) ) continue;
+
+        const source = nativeAttrs.includes( attrKey )
+            ? 'core/pattern-overrides'
+            : 'psp/overrides';
+
+        bindings[ attrKey ] = { source };
+    }
+
+    return bindings;
+}
+
 /**
  * Generate a stable metadata.name for a block if one isn't already set.
  * Format: {shortBlockType}-{base36timestamp}, e.g. "paragraph-1ax2z3".
@@ -89,13 +145,18 @@ export function PspAuthorPanel( { name, attributes, setAttributes } ) {
                         <Button
                             variant="secondary"
                             size="small"
-                            onClick={ () => setAttributes( {
-                                pspLock:  DEFAULT_LOCK,
-                                metadata: {
+                            onClick={ () => {
+                                const metaName = ensureMetadataName( attributes, name );
+                                const bindings = buildBindings( DEFAULT_LOCK, name );
+                                const updatedMeta = {
                                     ...( attributes.metadata ?? {} ),
-                                    name: ensureMetadataName( attributes, name ),
-                                },
-                            } ) }
+                                    name: metaName,
+                                };
+                                if ( Object.keys( bindings ).length > 0 ) {
+                                    updatedMeta.bindings = bindings;
+                                }
+                                setAttributes( { pspLock: DEFAULT_LOCK, metadata: updatedMeta } );
+                            } }
                         >
                             { __( 'Enable PSP for this block', 'pattern-sync-pro' ) }
                         </Button>
@@ -117,16 +178,27 @@ export function PspAuthorPanel( { name, attributes, setAttributes } ) {
         const updates = { pspLock: newLock };
 
         if ( Object.keys( newLock ).length > 0 ) {
-            // Ensure metadata.name is set — the stable override key for
-            // both WP native (Phase 4) and PSP storage (Phase 5).
-            updates.metadata = {
+            const metaName = ensureMetadataName( attributes, name );
+            const bindings = buildBindings( newLock, name );
+
+            const updatedMeta = {
                 ...( attributes.metadata ?? {} ),
-                name: ensureMetadataName( attributes, name ),
+                name: metaName,
             };
+
+            // Write bindings when content group is free (Phase 4).
+            // Clear any existing bindings when content is locked.
+            if ( Object.keys( bindings ).length > 0 ) {
+                updatedMeta.bindings = bindings;
+            } else {
+                delete updatedMeta.bindings;
+            }
+
+            updates.metadata = updatedMeta;
         } else {
-            // PSP removed — clear metadata.name so WP doesn't interpret
-            // this block as having outstanding bindings.
-            const { name: _n, ...restMeta } = attributes.metadata ?? {};
+            // PSP removed — clear metadata.name and bindings so WP doesn't
+            // treat this block as having active pattern overrides.
+            const { name: _n, bindings: _b, ...restMeta } = attributes.metadata ?? {};
             updates.metadata = Object.keys( restMeta ).length > 0 ? restMeta : undefined;
         }
 
