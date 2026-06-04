@@ -10,6 +10,7 @@ import { useSelect }                  from '@wordpress/data';
 import { useEffect }                  from '@wordpress/element';
 
 import './components/PspPatternWrapper';
+import './bindings/psp-overrides-source';
 import { initLockEnforcement }  from './store/lock-enforcement';
 import { PspAuthorPanel }       from './components/PspAuthorPanel';
 import { PspInstancePanel }     from './components/PspInstancePanel';
@@ -38,6 +39,11 @@ addFilter(
 
         if ( name === 'core/block' ) {
             extra.pspOverrides = { type: 'object', default: {} };
+            // `content` is WP's native per-instance override storage attribute.
+            // We register it here so PSP can read/write it alongside pspOverrides
+            // during the Phase 5 migration. WP core already registers this on
+            // core/block — this is a no-op if it's already registered.
+            extra.content = { type: 'object', default: {} };
         }
 
         return {
