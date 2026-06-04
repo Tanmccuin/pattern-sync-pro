@@ -161,7 +161,7 @@ export function PspPatternPanel( { coreBlockClientId, patternId } ) {
     const [ activeIndex, setActiveIndex ] = useState( 0 );
     const [ confirmReset, setConfirmReset ] = useState( false );
 
-    const { updateBlockAttributes } = useDispatch( 'core/block-editor' );
+    const { updateBlockAttributes, selectBlock } = useDispatch( 'core/block-editor' );
 
     // All PSP-managed inner blocks + their computed block keys + current overrides.
     // Phase 5: reads from core/block `content` attribute (WP-native format)
@@ -325,7 +325,14 @@ export function PspPatternPanel( { coreBlockClientId, patternId } ) {
                                         fullyLocked      && 'is-locked',
                                         hasOverrides     && 'has-overrides',
                                     ].filter( Boolean ).join( ' ' ) }
-                                    onClick={ () => { setActiveIndex( i ); setConfirmReset( false ); } }
+                                    onClick={ () => {
+                                        setActiveIndex( i );
+                                        setConfirmReset( false );
+                                        // Select the inner block so its own controls
+                                        // (Stackable Style tab, Kadence Design panel, etc.)
+                                        // appear in the sidebar alongside PSP's Instance Panel.
+                                        selectBlock( block.clientId );
+                                    } }
                                     title={ fullName( block ) }
                                 >
                                     { label }
@@ -448,7 +455,12 @@ export function PspPatternPanel( { coreBlockClientId, patternId } ) {
                             variant="tertiary"
                             size="small"
                             disabled={ safeIndex === 0 }
-                            onClick={ () => { setActiveIndex( safeIndex - 1 ); setConfirmReset( false ); } }
+                            onClick={ () => {
+                                const newIdx = safeIndex - 1;
+                                setActiveIndex( newIdx );
+                                setConfirmReset( false );
+                                selectBlock( pspBlocks[ newIdx ]?.clientId );
+                            } }
                         >
                             { __( '← Prev', 'pattern-sync-pro' ) }
                         </Button>
@@ -456,7 +468,12 @@ export function PspPatternPanel( { coreBlockClientId, patternId } ) {
                             variant="tertiary"
                             size="small"
                             disabled={ safeIndex === pspBlocks.length - 1 }
-                            onClick={ () => { setActiveIndex( safeIndex + 1 ); setConfirmReset( false ); } }
+                            onClick={ () => {
+                                const newIdx = safeIndex + 1;
+                                setActiveIndex( newIdx );
+                                setConfirmReset( false );
+                                selectBlock( pspBlocks[ newIdx ]?.clientId );
+                            } }
                         >
                             { __( 'Next →', 'pattern-sync-pro' ) }
                         </Button>
