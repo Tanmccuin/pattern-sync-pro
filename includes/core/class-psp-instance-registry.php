@@ -43,10 +43,11 @@ class PSP_Instance_Registry {
             return;
         }
 
-        // pspOverrides is stored in the core/block wrapper in post_content.
-        // pspLock is stored on inner blocks inside the source pattern (wp_block),
-        // so its presence in post_content indicates a pattern source being saved.
-        $has_psp = str_contains( $post->post_content, '"pspOverrides"' )
+        // Phase 5: overrides now live in the `content` attribute using the
+        // psp/overrides binding source. Also check legacy pspOverrides for
+        // sites that haven't migrated yet.
+        $has_psp = str_contains( $post->post_content, '"psp/overrides"' )
+                || str_contains( $post->post_content, '"pspOverrides"' )
                 || str_contains( $post->post_content, '"pspLock"' );
 
         $affected = get_option( PSP_OPTION_AFFECTED_POSTS, [] );

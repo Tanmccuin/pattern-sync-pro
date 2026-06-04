@@ -27,9 +27,10 @@ export function withPspLockIndicator( BlockListBlock ) {
             const parents    = getBlockParents( clientId );
             const inPattern  = parents.some( pid => getBlock( pid )?.name === 'core/block' );
 
-            // For core/block wrappers — check if pspOverrides has any entries.
-            const overrides  = name === 'core/block'
-                ? ( attributes?.pspOverrides ?? {} )
+            // For core/block wrappers — check if content (Phase 5 storage) or
+            // legacy pspOverrides has any override entries.
+            const overrides = name === 'core/block'
+                ? ( attributes?.content ?? attributes?.pspOverrides ?? {} )
                 : {};
 
             return {

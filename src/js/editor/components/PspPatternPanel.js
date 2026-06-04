@@ -19,7 +19,7 @@ import {
 } from '@wordpress/components';
 import { InspectorControls }            from '@wordpress/block-editor';
 import { useSelect, useDispatch, select } from '@wordpress/data';
-import { useState }                     from '@wordpress/element';
+import { useState, useEffect }          from '@wordpress/element';
 import { __, sprintf }                  from '@wordpress/i18n';
 import { lock, unlock }                 from '@wordpress/icons';
 import {
@@ -29,7 +29,7 @@ import {
     generateBlockKey,
 } from '../utils/lock-utils';
 
-const { isPro, siteAdminUrl } = window.pspData ?? {};
+const { isPro, siteAdminUrl, debug: DEBUG } = window.pspData ?? {};
 
 // ── Label helpers ─────────────────────────────────────────────────────────────
 
@@ -258,7 +258,9 @@ export function PspPatternPanel( { coreBlockClientId, patternId } ) {
     const { updateBlockAttributes } = useDispatch( 'core/block-editor' );
 
     // All PSP-managed inner blocks + their computed block keys + current overrides.
-    const { pspBlocks, pspOverrides } = useSelect( ( sel ) => {
+    // Phase 5: reads from core/block `content` attribute (WP-native format)
+    // instead of the legacy `pspOverrides` attribute.
+    const { pspBlocks, overrides } = useSelect( ( sel ) => {
         const blockStore = sel( 'core/block-editor' );
         const allIds  = blockStore.getClientIdsWithDescendants?.( coreBlockClientId ) ?? [];
         // Verify parent chain — prevents blocks from OTHER synced patterns on
@@ -269,9 +271,6 @@ export function PspPatternPanel( { coreBlockClientId, patternId } ) {
         const allBlocks = ownIds.map( id => blockStore.getBlock( id ) ).filter( Boolean );
 
         // Only show blocks explicitly enabled by the author (non-empty pspLock).
-        // Unconfigured blocks are excluded to keep the chip nav clean for
-        // complex patterns. Authors enable blocks via the Author Panel in the
-        // source pattern editor. Exclude nested core/block wrappers too.
         const pspBlocks = allBlocks
             .filter( b => b.name && b.name !== 'core/block'
                 && b.attributes?.pspLock
@@ -281,18 +280,70 @@ export function PspPatternPanel( { coreBlockClientId, patternId } ) {
                 blockKey: generateBlockKey( blockStore, coreBlockClientId, b.clientId ),
             } ) );
 
-        const coreBlock    = blockStore.getBlock( coreBlockClientId );
-        const pspOverrides = coreBlock?.attributes?.pspOverrides ?? {};
+        const coreBlock = blockStore.getBlock( coreBlockClientId );
 
-        return { pspBlocks, pspOverrides };
+        // Phase 5: read from `content` (WP-native) with fallback to legacy
+        // `pspOverrides` so old data still displays before migration runs.
+        const overrides = Object.keys( coreBlock?.attributes?.content ?? {} ).length > 0
+            ? ( coreBlock?.attributes?.content ?? {} )
+            : ( coreBlock?.attributes?.pspOverrides ?? {} );
+
+        return { pspBlocks, overrides };
+    }, [ coreBlockClientId ] );
+
+    // ── Phase 5 migration: pspOverrides → content ─────────────────────────────
+    // Runs once when the panel mounts. If old pspOverrides data exists and
+    // content is empty, migrates the data mapping positional keys to metadata.name.
+    useEffect( () => {
+        const blockStore = select( 'core/block-editor' );
+        const coreBlock  = blockStore.getBlock( coreBlockClientId );
+        if ( ! coreBlock ) return;
+
+        const legacy  = coreBlock.attributes.pspOverrides ?? {};
+        const current = coreBlock.attributes.content      ?? {};
+
+        if ( Object.keys( legacy ).length === 0 ) return;  // Nothing to migrate.
+        if ( Object.keys( current ).length > 0 )  return;  // Already migrated.
+
+        // Build a map from positional key → metadata.name for this pattern.
+        const allIds = blockStore.getClientIdsWithDescendants?.( coreBlockClientId ) ?? [];
+        const ownIds = allIds.filter( id =>
+            ( blockStore.getBlockParents?.( id ) ?? [] ).includes( coreBlockClientId )
+        );
+        const patternBlocks = ownIds.map( id => blockStore.getBlock( id ) ).filter( Boolean );
+
+        const keyMap     = {};
+        const typeCounts = {};
+        for ( const block of patternBlocks ) {
+            const short        = block.name.replace( /^core\//, '' ).replace( /\//g, '-' );
+            const index        = typeCounts[ short ] ?? 0;
+            typeCounts[ short ] = index + 1;
+            const positional   = `${ short }-${ index }`;
+            const named        = block.attributes?.metadata?.name;
+            if ( named ) keyMap[ positional ] = named;
+        }
+
+        // Re-key legacy overrides using metadata.name where available.
+        const migrated = {};
+        for ( const [ key, value ] of Object.entries( legacy ) ) {
+            migrated[ keyMap[ key ] ?? key ] = value;
+        }
+
+        if ( Object.keys( migrated ).length > 0 ) {
+            if ( DEBUG ) console.log( '[PSP] migrating pspOverrides → content', migrated );
+            updateBlockAttributes( coreBlockClientId, {
+                content:      migrated,
+                pspOverrides: {},   // Clear legacy data after migration.
+            } );
+        }
     }, [ coreBlockClientId ] );
 
     if ( pspBlocks.length === 0 ) return null;
 
     const safeIndex   = Math.min( activeIndex, pspBlocks.length - 1 );
     const activeBlock = pspBlocks[ safeIndex ];
-    const blockOverrides = activeBlock?.blockKey ? ( pspOverrides[ activeBlock.blockKey ] ?? {} ) : {};
-    const hasAnyOverrides = Object.keys( pspOverrides ).length > 0;
+    const blockOverrides  = activeBlock?.blockKey ? ( overrides[ activeBlock.blockKey ] ?? {} ) : {};
+    const hasAnyOverrides = Object.keys( overrides ).length > 0;
 
     // Lock state for the active block.
     const effectiveLockGroups = getLockGroupsForBlock( activeBlock?.name ?? '' );
@@ -308,9 +359,10 @@ export function PspPatternPanel( { coreBlockClientId, patternId } ) {
         const coreBlock = select( 'core/block-editor' ).getBlock( coreBlockClientId );
         if ( ! coreBlock ) return;
 
-        const existing   = coreBlock.attributes.pspOverrides ?? {};
-        const entry      = { ...( existing[ activeBlock.blockKey ] ?? {} ) };
-        const sourceVal  = activeBlock.attributes[ attrKey ] ?? '';
+        // Phase 5: write to `content` (WP-native storage).
+        const existing  = coreBlock.attributes.content ?? {};
+        const entry     = { ...( existing[ activeBlock.blockKey ] ?? {} ) };
+        const sourceVal = activeBlock.attributes[ attrKey ] ?? '';
 
         if ( value === sourceVal ) {
             delete entry[ attrKey ];
@@ -324,20 +376,20 @@ export function PspPatternPanel( { coreBlockClientId, patternId } ) {
         } else {
             updated[ activeBlock.blockKey ] = entry;
         }
-        updateBlockAttributes( coreBlockClientId, { pspOverrides: updated } );
+        updateBlockAttributes( coreBlockClientId, { content: updated } );
     };
 
     const resetActiveBlock = () => {
         if ( ! activeBlock?.blockKey ) return;
         const coreBlock = select( 'core/block-editor' ).getBlock( coreBlockClientId );
-        const updated   = { ...( coreBlock?.attributes?.pspOverrides ?? {} ) };
+        const updated   = { ...( coreBlock?.attributes?.content ?? {} ) };
         delete updated[ activeBlock.blockKey ];
-        updateBlockAttributes( coreBlockClientId, { pspOverrides: updated } );
+        updateBlockAttributes( coreBlockClientId, { content: updated } );
         setConfirmReset( false );
     };
 
     const resetAll = () => {
-        updateBlockAttributes( coreBlockClientId, { pspOverrides: {} } );
+        updateBlockAttributes( coreBlockClientId, { content: {} } );
         setConfirmReset( false );
     };
 
@@ -355,7 +407,7 @@ export function PspPatternPanel( { coreBlockClientId, patternId } ) {
                 <div className="psp-block-nav">
                     <div className="psp-block-chips" role="tablist" aria-label={ __( 'Pattern blocks', 'pattern-sync-pro' ) }>
                         { pspBlocks.map( ( block, i ) => {
-                            const overridesForBlock = block.blockKey ? ( pspOverrides[ block.blockKey ] ?? {} ) : {};
+                            const overridesForBlock = block.blockKey ? ( overrides[ block.blockKey ] ?? {} ) : {};
                             const hasOverrides      = Object.keys( overridesForBlock ).length > 0;
                             const lm                = PSP_Pattern_Lock_JS.getLockMask( block.attributes?.pspLock );
                             const fullyLocked       = Object.values( lm ).every( Boolean );

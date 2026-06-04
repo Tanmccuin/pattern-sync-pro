@@ -47,7 +47,13 @@ class PSP_Block_Renderer {
             return $block_content;
         }
 
-        $overrides = $block['attrs']['pspOverrides'] ?? [];
+        // Phase 5: read from `content` (WP-native storage).
+        // Fall back to legacy `pspOverrides` for data that hasn't been migrated
+        // by the JS panel yet (e.g. sites updating from an older PSP version).
+        $overrides = $block['attrs']['content'] ?? [];
+        if ( empty( $overrides ) ) {
+            $overrides = $block['attrs']['pspOverrides'] ?? [];
+        }
         if ( empty( $overrides ) ) {
             return $block_content;
         }
