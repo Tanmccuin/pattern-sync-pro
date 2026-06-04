@@ -37,12 +37,8 @@ addFilter(
             pspLock: { type: 'object', default: {} },
         };
 
-        if ( name === 'core/block' ) {
-            // `content` is WP's native per-instance override storage attribute,
-            // shared by core/pattern-overrides and psp/overrides binding sources.
-            // WP core already registers this — this ensures PSP can read/write it.
-            extra.content = { type: 'object', default: {} };
-        }
+        // Note: `content` on core/block is already registered by WP core and
+        // used by core/pattern-overrides. PSP reads/writes it without re-registering.
 
         return {
             ...settings,
