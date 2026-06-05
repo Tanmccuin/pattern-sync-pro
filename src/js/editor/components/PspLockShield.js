@@ -44,28 +44,47 @@ export function PspLockShield( { attributes } ) {
 
     if ( ! hasLocks ) return null;
 
+    const shieldContent = (
+        <div className="psp-lock-shield">
+            <span className="psp-lock-shield__icon" aria-hidden="true">🔒</span>
+            <div className="psp-lock-shield__body">
+                <strong>{ __( 'Controls are locked', 'pattern-sync-pro' ) }</strong>
+                <p>
+                    { sprintf(
+                        /* translators: comma-separated group names */
+                        __( '%s — changes will be reverted. Select the pattern block to manage overrides.', 'pattern-sync-pro' ),
+                        lockedGroups.join( ', ' )
+                    ) }
+                </p>
+            </div>
+        </div>
+    );
+
     return (
-        <InspectorControls>
-            <PanelBody
-                title={ __( 'Pattern Sync Pro', 'pattern-sync-pro' ) }
-                icon={ lock }
-                initialOpen={ true }
-                className="psp-panel psp-lock-shield-panel"
-            >
-                <div className="psp-lock-shield">
-                    <span className="psp-lock-shield__icon" aria-hidden="true">🔒</span>
-                    <div className="psp-lock-shield__body">
-                        <strong>{ __( 'Controls are locked', 'pattern-sync-pro' ) }</strong>
-                        <p>
-                            { sprintf(
-                                /* translators: comma-separated group names */
-                                __( '%s — changes will be reverted. Select the pattern block to manage overrides.', 'pattern-sync-pro' ),
-                                lockedGroups.join( ', ' )
-                            ) }
-                        </p>
-                    </div>
-                </div>
-            </PanelBody>
-        </InspectorControls>
+        <>
+            { /* Default slot — shows on Settings tab */ }
+            <InspectorControls>
+                <PanelBody
+                    title={ __( 'Pattern Sync Pro', 'pattern-sync-pro' ) }
+                    icon={ lock }
+                    initialOpen={ true }
+                    className="psp-panel psp-lock-shield-panel"
+                >
+                    { shieldContent }
+                </PanelBody>
+            </InspectorControls>
+
+            { /* Styles slot — shows on Styles tab (WP typography/design controls) */ }
+            <InspectorControls group="styles">
+                <PanelBody
+                    title={ __( 'Pattern Sync Pro', 'pattern-sync-pro' ) }
+                    icon={ lock }
+                    initialOpen={ true }
+                    className="psp-panel psp-lock-shield-panel"
+                >
+                    { shieldContent }
+                </PanelBody>
+            </InspectorControls>
+        </>
     );
 }

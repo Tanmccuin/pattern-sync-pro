@@ -10,8 +10,17 @@ const {
 
 // Core block baseline — attribute keys for each lock group.
 export const LOCK_GROUPS = LOCK_GROUPS_FROM_PHP ?? {
-    layout:     [ 'layout', 'style', 'align', 'textAlign', 'verticalAlignment', 'justifyContent', 'orientation', 'flexWrap', 'columnCount' ],
-    design:     [ 'backgroundColor', 'textColor', 'gradient', 'fontSize', 'fontFamily', 'style', 'borderColor', 'className' ],
+    layout:     [ 'layout', 'style', 'align', 'textAlign', 'verticalAlignment', 'justifyContent', 'orientation', 'flexWrap', 'columnCount', 'fitText', 'width' ],
+    design:     [
+        // WP core color/typography attrs
+        'backgroundColor', 'textColor', 'gradient', 'fontSize', 'fontFamily',
+        'style', 'borderColor',
+        // WP core paragraph-specific design attrs (boolean/non-string)
+        'dropCap', 'fontStyle', 'fontWeight', 'letterSpacing', 'lineHeight',
+        'textDecoration', 'textTransform',
+        // WP core image/media design attrs
+        'sizeSlug', 'lightbox',
+    ],
     content:    [ 'content', 'value', 'caption', 'label', 'placeholder', 'url', 'href', 'src', 'alt', 'title' ],
     visibility: [ 'isHidden', 'hideOnMobile', 'hideOnTablet', 'hideOnDesktop' ],
     classes:    [ 'className', 'anchor' ],
@@ -303,13 +312,21 @@ export function getContentFields( blockName, groupAttrs, sourceAttrs ) {
 
     return groupAttrs
         .filter( attrKey => {
-            if ( ! ( attrKey in sourceAttrs ) ) return false;
             const schema = registeredAttrs[ attrKey ];
+
             if ( schema ) {
+                // Attr is registered on the block type — include if it's
+                // string-like. For html-sourced attrs (core/paragraph.content)
+                // the value may not be in sourceAttrs during initial hydration
+                // of synced patterns, so we rely on the schema rather than
+                // checking sourceAttrs presence.
                 return schema.type === 'string'
                     || [ 'html', 'text', 'attribute' ].includes( schema.source );
             }
-            return typeof sourceAttrs[ attrKey ] === 'string';
+
+            // Not registered (third-party, custom block): fall back to checking
+            // if the current value is a string.
+            return ( attrKey in sourceAttrs ) && typeof sourceAttrs[ attrKey ] === 'string';
         } )
         .map( attrKey => {
             const schema   = registeredAttrs[ attrKey ];

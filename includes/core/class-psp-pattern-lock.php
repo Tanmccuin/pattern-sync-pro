@@ -20,8 +20,14 @@ class PSP_Pattern_Lock {
      * Each group key maps to the block attributes it governs.
      */
     public const LOCK_GROUPS = [
-        'layout'     => [ 'layout', 'style', 'align', 'textAlign', 'verticalAlignment', 'justifyContent', 'orientation', 'flexWrap', 'columnCount' ],
-        'design'     => [ 'backgroundColor', 'textColor', 'gradient', 'fontSize', 'fontFamily', 'style', 'borderColor', 'className' ],
+        'layout'     => [ 'layout', 'style', 'align', 'textAlign', 'verticalAlignment', 'justifyContent', 'orientation', 'flexWrap', 'columnCount', 'fitText', 'width' ],
+        'design'     => [
+            'backgroundColor', 'textColor', 'gradient', 'fontSize', 'fontFamily',
+            'style', 'borderColor',
+            'dropCap', 'fontStyle', 'fontWeight', 'letterSpacing', 'lineHeight',
+            'textDecoration', 'textTransform',
+            'sizeSlug', 'lightbox',
+        ],
         'content'    => [ 'content', 'value', 'caption', 'label', 'placeholder', 'url', 'href', 'src', 'alt', 'title' ],
         'visibility' => [ 'isHidden', 'hideOnMobile', 'hideOnTablet', 'hideOnDesktop' ],
         'classes'    => [ 'className', 'anchor' ],
